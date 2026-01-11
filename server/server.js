@@ -17,10 +17,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Test route
+// Routes
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the MERN backend API' });
+  res.json({ message: 'Welcome to the Student Result Analyzer API' });
 });
+
+app.use('/api/auth', require('./routes/authRoutes'));
 
 // Start server
 const PORT = process.env.PORT || 5000;

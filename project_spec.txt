@@ -1,0 +1,252 @@
+STUDENT RESULT ANALYZER
+
+1. PROJECT OVERVIEW
+
+Project Title: STUDENT RESULT ANALYZER
+Tech Stack: MERN (MongoDB, Express, React, Node.js)
+
+2. PROBLEM STATEMENT
+
+In many educational institutions, student examination results are often managed manually or using basic tools like spreadsheets. This approach can be time-consuming, error-prone, and inefficient, especially when handling large numbers of students and multiple subjects. Generating reports such as pass/fail status, grade distribution, subject-wise performance, and overall class analysis becomes difficult and lacks accuracy.
+There is a need for a computerized system that can store student details, process examination marks, calculate total marks, percentages, grades, and analyze performance efficiently. The system should also provide quick access to individual student results as well as overall analytical reports for teachers and administrators.
+
+3.PROPOSED SYSTEM
+
+The Proposed Student Result Analyzer System is designed to overcome the limitations of traditional manual result processing and provide a smart, efficient, and accurate way to evaluate students’ academic performance. The system uses digital tools, data processing techniques, and visual insights to help teachers, administrators, and students better understand academic outcomes.
+
+
+
+
+
+Features of Proposed System
+
+a)	Automated Result Calculation
+Auto-compute total marks, grades, SGPA/CGPA, and percentages. Minimizes human errors in manual calculation.
+b)	Performance Analysis 
+Subject-wise and student-wise performance charts.
+ Identify strong/weak areas using visual analytics.
+ Trend analysis across semesters.
+c)	Data Visualization
+ Bar charts, pie charts, line graphs, and heat maps.
+ Comparison between class average and individual student scores.
+d)	Report Generation 
+Automated generation of mark sheets, grade cards, and progress reports. 
+Export to PDF / Excel. 
+e)	Admin&Faculty Dashboard
+ Upload marks in bulk using Excel or CSV. 
+Manage student records. 
+Track class performance and pass/fail ratios.
+f)	Student Portal
+ Students can log in to view their marks, grades, and performance insights. Personalized feedback based on results.
+g)	Alerts&Suggestions
+ System flags low-performing students.
+ Automated academic suggestions (e.g., “Improve in Mathematics based on low score trend”).
+ 
+
+4. USER ROLES & PERMISSIONS
+
+
+1.Admin 
+2.Principal
+3.Staff
+4.Teacher
+5.Student
+
+1.ADMIN	
+
+1.Add update, delete Principal/staff/teacher/student accounts 
+2.Assign roles & permissions
+3.Manage student information 
+4. Create/modify subject lists
+5. View all students’ results
+6.Approve or freeze results
+7.Manage grading schemas and pass criteria
+8. Class-wise performance report 
+9.Subject-wise analysis 
+10.Toppers list & rank generation
+
+2.PRINCIPAL 
+
+1.Login & Profile Management
+2.View results of students 
+3.Analyze performance of students 
+4.Monitor subject wise performance of students
+
+3.STAFF 
+
+1.Login & Profile Management
+2.Enter marks of students 
+3.View final results of students
+
+
+
+ 
+4.TEACHER 
+
+1.Login & Profile Management 
+2. View assigned classes and subjects
+3.Access student lists for teaching groups 
+4. Enter student marks for exams/tests 
+5.Edit/update marks before final submission
+6. View student performance 
+7.Analyze class performance 
+8.View automated analytics (graphs/charts) 
+9.Share feedback 
+10. Send notifications to students
+
+5.STUDENT 
+
+1.Secure login 
+2.Overview of academic performance 
+3. Profile Viewing 
+4.View results
+5. Subject-wise performance 
+6.Graphs showing progress over time
+7.Strengths and weaknesses 
+8. Alerts for new results
+9.Announcements from teachers/admin 
+10. Send queries or feedback to teachers
+
+
+5. DATABASE STRUCTURE (Schemas)
+
+A. User Schema:
+   - name (String)
+   - email (String, Unique)
+   - password (Hashed)
+   - role (String:  'admin'/’principal’/’staff’/’teacher’/’student’)
+B. Student :
+    -student_id(int)
+    -name(String)
+     -class(String)
+     -section(String)
+     -dob(Date)
+C.Subject
+   -subject_id(Int)
+   -subject_name(String)
+   -max_marks(Int) 
+D.marks
+   -mark_id(Int)
+   -student_id(Int) FK
+   -subject_id(Int)  FK
+   -marks_obtained(Int)
+E.result
+   -result_id(Int)
+   -student_id(Int) FK
+   -total_marks(Int)
+   -percentage(Decimal)
+    -grade(Char)
+F.teacher
+  -teacher_id(Int)
+  -teacher_name(String)
+G.class
+ -class_id(Int)
+ -class_name(String)
+ -subject_id(Int) FK
+ -teacher_id(Int) FK
+H.Feedback
+ -f_id(Int)
+-teacher_id(Int) FK
+-student_id(Int) FK
+-feedback(varchar)
+
+6. FEATURE WORKFLOW (The "User Journey")
+
+User Journey-Admin
+--------------------------
+1. Login: Admin logs in and lands on the "Menu Page".
+2.Add: Add Principal, staffs and teachers
+3.Create: Create classes & subjects
+4.Register: Students
+5.Assign: Assigns subjects to classes
+6.Review: Review overall results
+
+User Journey – Principal
+-------------------------------
+1.	Login: Principal logs in and lands on the "Menu Page".
+2.	Browse: Principal sees a list of options (fetched from DB).
+3.	View: Students list
+4.	Browse: Principal sees results of students
+5.	Analyze: Performance of students
+
+User Journey – Staff
+---------------------------
+     1.Login: Staff logs in and lands on the "Menu Page".
+     2.Browse: Staff sees a list of students
+     3.Enter: Enter marks of students
+     4.View: Final results of students
+ 
+
+User Journey – Teachers
+------------------------------------
+1.Login: Teacher logs in and lands on the "Menu Page".
+2.Browse: Sees a list of options
+3.View: Assigned classes and subjects
+4.View: Students list
+5.Enter: Enter marks
+6.Update: Edit/Update marks for final submission
+7.View: Student performance 
+8.Analyze: Class performance
+9.View: Automated analytics(graphs/charts)
+10.Feedback: Share feedback to students
+11.Notifications: Send notifications to students
+
+User Journey-Student
+---------------------------
+1.Login: Student logs in and lands on the "Menu Page".
+2. Browse: Student sees a list of options (fetched from DB).
+3. View: View results
+4.View: Graphs showing progress over time 
+5.Notifications: View notifications from teachers/admin
+6. Feedback: View feedback and send any queries to teachers.
+ 
+API ENDPOINTS(URL RULES)
+
+1.Authentication APIs
+Method	Endpoint	Description
+POST	/auth/login	Admin/Principal/staff/teacher/student login
+POST	/auth/register	Register new admin
+GET	/auth/profile	Get logged in user details
+POST	/auth/logout	Logout user
+
+2.Admin API
+
+Method	Endpoint	Description
+GET	/results/studentid	Get result of a student
+GET	/results	Get all students results
+POST	/results/calculate/:studentid	Calculate total,percentage,grade
+GET	/analysis/toppers	Get top performers
+GET	/analysis/class-average	Get class average
+GET	/analysis/subject/:name	Subject wise analysis
+GET	/analysis/pass-fail	Pass or Fail statistics
+GET	/reports/download/:id	Download pdf
+3.Student APIs
+Method	Endpoint	Description
+POST	/students	Add new student
+GET	/students	Get all students
+GET	/student/:id	Get students by id
+PUT	/student/:id	Update student details
+GET	/reports/download/:id	Download pdf
+DELETE	/students/:id	Delete student
+4.Principal API
+Method	Endpoint	Description
+GET	reports/student/:id	Student result report
+GET	/reports/download/:id	Download pdf
+5.Staff API
+Method	Endpoint	Description
+POST	/marks/studentid	Add marks for a student
+PUT	/marks/studentid	Update student marks
+GET	/marks/studentid	View student marks
+GET	/reports/download/:id	Download pdf
+6.Teacher API
+Method	Endpoint	Description
+POST	/marks/studentid	Add marks for a student
+PUT	/marks/studentid	Update student marks
+PUT	/marks/studentid	Final submission of marks
+GET	/marks/studentid	View student marks
+GET	/reports/download/:id	Download pdf
+POST	/feedback/studentid	Send feedback to students
+POST	/notifications/studentid	Send notifications to students
+
+
+
