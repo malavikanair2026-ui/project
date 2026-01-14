@@ -1,0 +1,82 @@
+const express = require('express');
+const Result = require('../models/Result');
+const Marks = require('../models/Marks');
+const Subject = require('../models/Subject');
+const { calculateGrade, calculatePercentage, calculateSGPA } = require('../utils/calculateResult');
+
+const router = express.Router();
+
+// Helper to calculate and upsert result for a student
+const calculateStudentResult = async (studentId, semester) => {
+  const marksFilter = { student: studentId };
+  if (semester) marksFilter.semester = semester;
+
+  const marks = await Marks.find(marksFilter).populate('subject');
+  if (!marks.length) {
+    throw new Error('No marks found for this student/semester');
+  }
+
+  let totalMarks = 0;
+  let maxMarks = 0;
+
+  marks.forEach((m) => {
+    totalMarks += m.marks_obtained;
+    maxMarks += m.subject?.max_marks || 0;
+  });
+
+  const percentage = Number(calculatePercentage(totalMarks, maxMarks));
+  const grade = calculateGrade(percentage);
+  const sgpa = calculateSGPA(grade);
+
+  const result = await Result.findOneAndUpdate(
+    { student: studentId, semester: semester || 'N/A' },
+    {
+      student: studentId,
+      semester: semester || 'N/A',
+      total_marks: totalMarks,
+      percentage,
+      grade,
+      sgpa,
+      cgpa: sgpa, // simple placeholder for demo
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  return result;
+};
+
+// Calculate result for a student
+router.post('/calculate/:studentId', async (req, res) => {
+  try {
+    const result = await calculateStudentResult(req.params.studentId, req.body.semester);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to calculate result' });
+  }
+});
+
+// Get all results
+router.get('/', async (_req, res) => {
+  try {
+    const results = await Result.find().populate('student');
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch results' });
+  }
+});
+
+// Get result for a student
+router.get('/:studentId', async (req, res) => {
+  try {
+    const filter = { student: req.params.studentId };
+    if (req.query.semester) filter.semester = req.query.semester;
+
+    const result = await Result.findOne(filter).populate('student');
+    if (!result) return res.status(404).json({ message: 'Result not found' });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch result' });
+  }
+});
+
+module.exports = router;
