@@ -13,10 +13,20 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get all classes
-router.get('/', async (_req, res) => {
+// Get all classes (optionally filter by teacher)
+router.get('/', async (req, res) => {
   try {
     const classes = await ClassModel.find().populate('subjects.subject subjects.teacher');
+
+    // If teacher query present, filter classes where any subject is taught by teacher
+    if (req.query.teacher) {
+      const teacherId = req.query.teacher;
+      const filtered = classes.filter((cls) =>
+        cls.subjects?.some((s) => String(s.teacher) === teacherId)
+      );
+      return res.json(filtered);
+    }
+
     res.json(classes);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch classes' });

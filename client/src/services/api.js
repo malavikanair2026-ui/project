@@ -95,7 +95,7 @@ export const usersAPI = {
 
 // Classes API
 export const classesAPI = {
-  getAll: () => api.get('/classes'),
+  getAll: (params = {}) => api.get('/classes', { params }),
   create: (data) => api.post('/classes', data),
   addSubject: (classId, data) => api.post(`/classes/${classId}/subjects`, data),
   update: (classId, data) => api.put(`/classes/${classId}`, data),

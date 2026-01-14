@@ -12,6 +12,10 @@ import SubjectManagement from './pages/admin/SubjectManagement';
 import ClassManagement from './pages/admin/ClassManagement';
 import ResultsView from './pages/admin/ResultsView';
 import Analytics from './pages/admin/Analytics';
+import TeacherLayout from './components/TeacherLayout';
+import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import TeacherClasses from './pages/teacher/TeacherClasses';
+import MarksEntry from './pages/teacher/MarksEntry';
 
 function App() {
   return (
@@ -95,6 +99,37 @@ function App() {
               <AdminLayout>
                 <Analytics />
               </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Teacher Routes */}
+        <Route
+          path="/teacher/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherDashboard />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/classes"
+          element{
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherClasses />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/marks"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <MarksEntry />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />

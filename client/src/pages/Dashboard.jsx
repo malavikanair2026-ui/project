@@ -39,6 +39,13 @@ const Dashboard = () => {
               </a>
             </div>
           )}
+          {user?.role === 'teacher' && (
+            <div style={styles.adminLink}>
+              <a href="/teacher/dashboard" style={styles.link}>
+                Go to Teacher Dashboard →
+              </a>
+            </div>
+          )}
           <p style={styles.note}>
             Dashboard content will be customized based on your role in the next phases.
           </p>
