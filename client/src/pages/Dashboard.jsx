@@ -32,6 +32,13 @@ const Dashboard = () => {
           <h2>Student Result Analyzer</h2>
           <p>You are logged in as: <strong>{getRoleDisplay(user?.role)}</strong></p>
           <p>Email: {user?.email}</p>
+          {user?.role === 'admin' && (
+            <div style={styles.adminLink}>
+              <a href="/admin/dashboard" style={styles.link}>
+                Go to Admin Dashboard →
+              </a>
+            </div>
+          )}
           <p style={styles.note}>
             Dashboard content will be customized based on your role in the next phases.
           </p>
@@ -93,6 +100,18 @@ const styles = {
     marginTop: '20px',
     color: '#666',
     fontStyle: 'italic',
+  },
+  adminLink: {
+    marginTop: '20px',
+    padding: '15px',
+    backgroundColor: '#e8f5e9',
+    borderRadius: '4px',
+  },
+  link: {
+    color: '#27ae60',
+    textDecoration: 'none',
+    fontWeight: '600',
+    fontSize: '16px',
   },
 };
 

@@ -23,6 +23,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/students', require('./routes/studentRoutes'));
 app.use('/api/subjects', require('./routes/subjectRoutes'));
 app.use('/api/marks', require('./routes/marksRoutes'));

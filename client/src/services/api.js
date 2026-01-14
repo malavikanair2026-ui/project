@@ -80,6 +80,17 @@ export const resultsAPI = {
     return api.get(`/results/${studentId}`, { params });
   },
   calculate: (studentId, semester) => api.post(`/results/calculate/${studentId}`, { semester }),
+  updateStatus: (resultId, status, approved_by) =>
+    api.put(`/results/${resultId}/status`, { status, approved_by }),
+};
+
+// Users API (for admin)
+export const usersAPI = {
+  getAll: () => api.get('/users'),
+  getById: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
 };
 
 // Classes API

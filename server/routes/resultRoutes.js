@@ -79,4 +79,25 @@ router.get('/:studentId', async (req, res) => {
   }
 });
 
+// Update result status (approve/freeze)
+router.put('/:resultId/status', async (req, res) => {
+  try {
+    const { status, approved_by } = req.body;
+    if (!['pending', 'approved', 'frozen'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const result = await Result.findByIdAndUpdate(
+      req.params.resultId,
+      { status, approved_by },
+      { new: true }
+    ).populate('student');
+
+    if (!result) return res.status(404).json({ message: 'Result not found' });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update result status' });
+  }
+});
+
 module.exports = router;
