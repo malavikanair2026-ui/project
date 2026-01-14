@@ -115,7 +115,7 @@ function App() {
         />
         <Route
           path="/teacher/classes"
-          element{
+          element={
             <ProtectedRoute allowedRoles={['teacher', 'admin']}>
               <TeacherLayout>
                 <TeacherClasses />

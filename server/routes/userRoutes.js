@@ -51,8 +51,24 @@ router.post('/', async (req, res) => {
       role: user.role,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to create user' });
+    console.error('Create user error:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    
+    // Handle duplicate key error (email already exists)
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+    
+    // Handle other errors
+    res.status(500).json({ 
+      message: error.message || 'Failed to create user',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

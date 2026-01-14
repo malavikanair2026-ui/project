@@ -6,6 +6,19 @@ const connectDB = require('./config/db');
 // Load environment variables
 dotenv.config();
 
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.error('ERROR: JWT_SECRET is not defined in .env file!');
+  console.error('Please add JWT_SECRET=your_secret_key_here to your server/.env file');
+  process.exit(1);
+}
+
+if (!process.env.MONGO_URI) {
+  console.error('ERROR: MONGO_URI is not defined in .env file!');
+  console.error('Please add MONGO_URI=your_mongodb_connection_string to your server/.env file');
+  process.exit(1);
+}
+
 // Initialize Express app
 const app = express();
 
