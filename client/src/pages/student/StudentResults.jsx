@@ -1,0 +1,307 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { studentsAPI, resultsAPI, marksAPI } from '../../services/api';
+
+const StudentResults = () => {
+  const { user } = useAuth();
+  const [student, setStudent] = useState(null);
+  const [results, setResults] = useState([]);
+  const [marks, setMarks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSemester, setSelectedSemester] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, [user, selectedSemester]);
+
+  const fetchData = async () => {
+    try {
+      // Get student record
+      const studentRes = await studentsAPI.getByUserId(user._id);
+      setStudent(studentRes.data);
+
+      // Get results
+      const resultsRes = await resultsAPI.getByStudent(
+        studentRes.data._id,
+        selectedSemester || undefined
+      );
+      // Handle both single result and array of results
+      if (resultsRes.data) {
+        setResults(Array.isArray(resultsRes.data) ? resultsRes.data : [resultsRes.data]);
+      } else {
+        setResults([]);
+      }
+
+      // Get marks
+      const marksRes = await marksAPI.getByStudent(
+        studentRes.data._id,
+        selectedSemester || undefined
+      );
+      setMarks(marksRes.data);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      if (error.response?.status !== 404) {
+        // 404 is okay if student doesn't exist yet
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getGradeColor = (grade) => {
+    if (['A+', 'A'].includes(grade)) return '#27ae60';
+    if (['B+', 'B'].includes(grade)) return '#3498db';
+    if (['C+', 'C'].includes(grade)) return '#f39c12';
+    if (grade === 'D') return '#e67e22';
+    return '#e74c3c';
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#f39c12',
+      approved: '#27ae60',
+      frozen: '#e74c3c',
+    };
+    return colors[status] || '#95a5a6';
+  };
+
+  if (loading) {
+    return <div style={styles.loading}>Loading...</div>;
+  }
+
+  if (!student) {
+    return (
+      <div style={styles.noStudentCard}>
+        <p>Student profile not found. Please contact your administrator.</p>
+      </div>
+    );
+  }
+
+  const uniqueSemesters = [...new Set(results.map((r) => r.semester))];
+
+  return (
+    <div>
+      <div style={styles.header}>
+        <h2 style={styles.title}>My Results</h2>
+        {uniqueSemesters.length > 0 && (
+          <select
+            value={selectedSemester}
+            onChange={(e) => setSelectedSemester(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Semesters</option>
+            {uniqueSemesters.map((sem) => (
+              <option key={sem} value={sem}>
+                {sem}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {results.length === 0 ? (
+        <div style={styles.noDataCard}>
+          <p>No results available yet.</p>
+        </div>
+      ) : (
+        <>
+          <div style={styles.resultsGrid}>
+            {results.map((result) => (
+              <div key={result._id} style={styles.resultCard}>
+                <div style={styles.resultHeader}>
+                  <h3 style={styles.semesterTitle}>{result.semester}</h3>
+                  <span
+                    style={{
+                      ...styles.statusBadge,
+                      backgroundColor: getStatusColor(result.status),
+                    }}
+                  >
+                    {result.status}
+                  </span>
+                </div>
+                <div style={styles.resultBody}>
+                  <div style={styles.resultRow}>
+                    <span>Total Marks:</span>
+                    <strong>{result.total_marks}</strong>
+                  </div>
+                  <div style={styles.resultRow}>
+                    <span>Percentage:</span>
+                    <strong>{result.percentage.toFixed(2)}%</strong>
+                  </div>
+                  <div style={styles.resultRow}>
+                    <span>Grade:</span>
+                    <span
+                      style={{
+                        ...styles.gradeBadge,
+                        backgroundColor: getGradeColor(result.grade),
+                      }}
+                    >
+                      {result.grade}
+                    </span>
+                  </div>
+                  <div style={styles.resultRow}>
+                    <span>SGPA:</span>
+                    <strong>{result.sgpa.toFixed(2)}</strong>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {marks.length > 0 && (
+            <div style={styles.marksSection}>
+              <h3 style={styles.sectionTitle}>Subject-wise Marks</h3>
+              <div style={styles.tableContainer}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Subject</th>
+                      <th>Marks Obtained</th>
+                      <th>Max Marks</th>
+                      <th>Exam Type</th>
+                      <th>Semester</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {marks.map((mark) => (
+                      <tr key={mark._id}>
+                        <td>{mark.subject?.subject_name || 'N/A'}</td>
+                        <td>{mark.marks_obtained}</td>
+                        <td>{mark.subject?.max_marks || 'N/A'}</td>
+                        <td>{mark.exam_type}</td>
+                        <td>{mark.semester || 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+const styles = {
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '30px',
+  },
+  title: {
+    fontSize: '28px',
+    color: '#2c3e50',
+    margin: 0,
+  },
+  select: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '16px',
+  },
+  resultsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '20px',
+    marginBottom: '30px',
+  },
+  resultCard: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  resultHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '15px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #f0f0f0',
+  },
+  semesterTitle: {
+    margin: 0,
+    fontSize: '18px',
+    color: '#2c3e50',
+  },
+  statusBadge: {
+    padding: '4px 12px',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '12px',
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  resultBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  resultRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #f0f0f0',
+  },
+  gradeBadge: {
+    padding: '4px 12px',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '14px',
+    fontWeight: '600',
+  },
+  marksSection: {
+    backgroundColor: 'white',
+    padding: '25px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  sectionTitle: {
+    fontSize: '20px',
+    marginTop: 0,
+    marginBottom: '20px',
+    color: '#2c3e50',
+  },
+  tableContainer: {
+    overflowX: 'auto',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+  },
+  th: {
+    padding: '12px',
+    textAlign: 'left',
+    fontWeight: '600',
+    color: '#2c3e50',
+    borderBottom: '2px solid #dee2e6',
+    backgroundColor: '#f8f9fa',
+  },
+  td: {
+    padding: '12px',
+    borderBottom: '1px solid #dee2e6',
+  },
+  noDataCard: {
+    backgroundColor: 'white',
+    padding: '40px',
+    borderRadius: '8px',
+    textAlign: 'center',
+    color: '#7f8c8d',
+  },
+  noStudentCard: {
+    backgroundColor: '#fff3cd',
+    padding: '20px',
+    borderRadius: '8px',
+    border: '1px solid #ffc107',
+    color: '#856404',
+  },
+  loading: {
+    textAlign: 'center',
+    padding: '40px',
+    fontSize: '18px',
+  },
+};
+
+export default StudentResults;

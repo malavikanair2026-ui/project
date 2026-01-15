@@ -42,6 +42,8 @@ app.use('/api/subjects', require('./routes/subjectRoutes'));
 app.use('/api/marks', require('./routes/marksRoutes'));
 app.use('/api/results', require('./routes/resultRoutes'));
 app.use('/api/classes', require('./routes/classRoutes'));
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // Start server
 const PORT = process.env.PORT || 5000;

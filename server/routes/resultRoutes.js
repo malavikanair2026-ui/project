@@ -65,15 +65,21 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// Get result for a student
+// Get result for a student (returns all results if no semester specified)
 router.get('/:studentId', async (req, res) => {
   try {
     const filter = { student: req.params.studentId };
     if (req.query.semester) filter.semester = req.query.semester;
 
-    const result = await Result.findOne(filter).populate('student');
-    if (!result) return res.status(404).json({ message: 'Result not found' });
-    res.json(result);
+    // If semester is specified, return single result; otherwise return all
+    if (req.query.semester) {
+      const result = await Result.findOne(filter).populate('student');
+      if (!result) return res.status(404).json({ message: 'Result not found' });
+      return res.json(result);
+    } else {
+      const results = await Result.find(filter).populate('student').sort({ createdAt: -1 });
+      return res.json(results);
+    }
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch result' });
   }

@@ -23,6 +23,17 @@ router.get('/', async (_req, res) => {
   }
 });
 
+// Get student by user ID
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const student = await Student.findOne({ user: req.params.userId }).populate('user');
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch student' });
+  }
+});
+
 // Get student by id
 router.get('/:id', async (req, res) => {
   try {

@@ -40,9 +40,16 @@ const Dashboard = () => {
             </div>
           )}
           {user?.role === 'teacher' && (
-            <div style={styles.adminLink}>
+            <div style={styles.teacherLink}>
               <a href="/teacher/dashboard" style={styles.link}>
                 Go to Teacher Dashboard →
+              </a>
+            </div>
+          )}
+          {user?.role === 'student' && (
+            <div style={styles.studentLink}>
+              <a href="/student/dashboard" style={styles.link}>
+                Go to Student Portal →
               </a>
             </div>
           )}
@@ -112,6 +119,18 @@ const styles = {
     marginTop: '20px',
     padding: '15px',
     backgroundColor: '#e8f5e9',
+    borderRadius: '4px',
+  },
+  teacherLink: {
+    marginTop: '20px',
+    padding: '15px',
+    backgroundColor: '#fff3e0',
+    borderRadius: '4px',
+  },
+  studentLink: {
+    marginTop: '20px',
+    padding: '15px',
+    backgroundColor: '#e3f2fd',
     borderRadius: '4px',
   },
   link: {

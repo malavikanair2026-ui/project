@@ -49,6 +49,7 @@ export const authAPI = {
 export const studentsAPI = {
   getAll: () => api.get('/students'),
   getById: (id) => api.get(`/students/${id}`),
+  getByUserId: (userId) => api.get(`/students/user/${userId}`),
   create: (data) => api.post('/students', data),
   update: (id, data) => api.put(`/students/${id}`, data),
   delete: (id) => api.delete(`/students/${id}`),
@@ -99,6 +100,19 @@ export const classesAPI = {
   create: (data) => api.post('/classes', data),
   addSubject: (classId, data) => api.post(`/classes/${classId}/subjects`, data),
   update: (classId, data) => api.put(`/classes/${classId}`, data),
+};
+
+// Feedback API
+export const feedbackAPI = {
+  getByStudent: (studentId) => api.get(`/feedback/student/${studentId}`),
+  create: (data) => api.post('/feedback', data),
+};
+
+// Notifications API
+export const notificationsAPI = {
+  getByStudent: (studentId) => api.get(`/notifications/student/${studentId}`),
+  create: (data) => api.post('/notifications', data),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
 };
 
 export default api;
