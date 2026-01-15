@@ -21,6 +21,14 @@ import StudentDashboard from './pages/student/StudentDashboard';
 import StudentResults from './pages/student/StudentResults';
 import StudentPerformance from './pages/student/StudentPerformance';
 import StudentFeedback from './pages/student/StudentFeedback';
+import PrincipalLayout from './components/PrincipalLayout';
+import PrincipalDashboard from './pages/principal/PrincipalDashboard';
+import PrincipalResults from './pages/principal/PrincipalResults';
+import PrincipalAnalytics from './pages/principal/PrincipalAnalytics';
+import StaffLayout from './components/StaffLayout';
+import StaffDashboard from './pages/staff/StaffDashboard';
+import StaffMarksEntry from './pages/staff/StaffMarksEntry';
+import StaffResults from './pages/staff/StaffResults';
 
 function App() {
   return (
@@ -176,6 +184,68 @@ function App() {
               <StudentLayout>
                 <StudentFeedback />
               </StudentLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Principal Routes */}
+        <Route
+          path="/principal/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['principal', 'admin']}>
+              <PrincipalLayout>
+                <PrincipalDashboard />
+              </PrincipalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/principal/results"
+          element={
+            <ProtectedRoute allowedRoles={['principal', 'admin']}>
+              <PrincipalLayout>
+                <PrincipalResults />
+              </PrincipalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/principal/analytics"
+          element={
+            <ProtectedRoute allowedRoles={['principal', 'admin']}>
+              <PrincipalLayout>
+                <PrincipalAnalytics />
+              </PrincipalLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Staff Routes */}
+        <Route
+          path="/staff/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <StaffLayout>
+                <StaffDashboard />
+              </StaffLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/marks"
+          element={
+            <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <StaffLayout>
+                <StaffMarksEntry />
+              </StaffLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/results"
+          element={
+            <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <StaffLayout>
+                <StaffResults />
+              </StaffLayout>
             </ProtectedRoute>
           }
         />

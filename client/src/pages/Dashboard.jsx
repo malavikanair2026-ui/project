@@ -53,6 +53,20 @@ const Dashboard = () => {
               </a>
             </div>
           )}
+          {user?.role === 'principal' && (
+            <div style={styles.principalLink}>
+              <a href="/principal/dashboard" style={styles.link}>
+                Go to Principal Dashboard →
+              </a>
+            </div>
+          )}
+          {user?.role === 'staff' && (
+            <div style={styles.staffLink}>
+              <a href="/staff/dashboard" style={styles.link}>
+                Go to Staff Dashboard →
+              </a>
+            </div>
+          )}
           <p style={styles.note}>
             Dashboard content will be customized based on your role in the next phases.
           </p>
@@ -131,6 +145,18 @@ const styles = {
     marginTop: '20px',
     padding: '15px',
     backgroundColor: '#e3f2fd',
+    borderRadius: '4px',
+  },
+  principalLink: {
+    marginTop: '20px',
+    padding: '15px',
+    backgroundColor: '#f3e5f5',
+    borderRadius: '4px',
+  },
+  staffLink: {
+    marginTop: '20px',
+    padding: '15px',
+    backgroundColor: '#e1f5fe',
     borderRadius: '4px',
   },
   link: {
