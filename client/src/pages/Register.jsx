@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/ToastContainer';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -10,10 +12,10 @@ const Register = () => {
     confirmPassword: '',
     role: 'student',
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { register, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,20 +29,18 @@ const Register = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      showToast('Passwords do not match', 'error');
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      showToast('Password must be at least 6 characters', 'error');
       return;
     }
 
@@ -50,9 +50,10 @@ const Register = () => {
     const result = await register(userData);
 
     if (result.success) {
+      showToast('Registration successful!', 'success');
       navigate('/dashboard');
     } else {
-      setError(result.message);
+      showToast(result.message || 'Registration failed. Please try again.', 'error');
     }
 
     setLoading(false);
@@ -64,9 +65,10 @@ const Register = () => {
         <h1 style={styles.title}>Student Result Analyzer</h1>
         <h2 style={styles.subtitle}>Register</h2>
 
-        {error && <div style={styles.error}>{error}</div>}
-
-        <form onSubmit={handleSubmit} style={styles.form}>
+        {loading ? (
+          <LoadingSpinner message="Creating account..." />
+        ) : (
+          <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.formGroup}>
             <label style={styles.label}>Name</label>
             <input
@@ -136,10 +138,11 @@ const Register = () => {
             />
           </div>
 
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? 'Registering...' : 'Register'}
-          </button>
-        </form>
+            <button type="submit" disabled={loading} style={styles.button}>
+              Register
+            </button>
+          </form>
+        )}
 
         <p style={styles.linkText}>
           Already have an account? <Link to="/login">Login here</Link>

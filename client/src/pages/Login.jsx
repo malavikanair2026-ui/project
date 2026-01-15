@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/ToastContainer';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,20 +26,19 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
+      showToast('Login successful!', 'success');
       navigate('/dashboard');
     } else {
-      setError(result.message);
+      showToast(result.message || 'Login failed. Please check your credentials.', 'error');
     }
 
     setLoading(false);
@@ -49,9 +50,10 @@ const Login = () => {
         <h1 style={styles.title}>Student Result Analyzer</h1>
         <h2 style={styles.subtitle}>Login</h2>
 
-        {error && <div style={styles.error}>{error}</div>}
-
-        <form onSubmit={handleSubmit} style={styles.form}>
+        {loading ? (
+          <LoadingSpinner message="Logging in..." />
+        ) : (
+          <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.formGroup}>
             <label style={styles.label}>Email</label>
             <input
@@ -78,10 +80,11 @@ const Login = () => {
             />
           </div>
 
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+            <button type="submit" disabled={loading} style={styles.button}>
+              Login
+            </button>
+          </form>
+        )}
 
         <p style={styles.linkText}>
           Don't have an account? <Link to="/register">Register here</Link>

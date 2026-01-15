@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './components/ToastContainer';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/AdminLayout';
 import Login from './pages/Login';
@@ -33,7 +34,8 @@ import StaffResults from './pages/staff/StaffResults';
 function App() {
   return (
     <AuthProvider>
-      <Routes>
+      <ToastProvider>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
@@ -251,6 +253,7 @@ function App() {
         />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      </ToastProvider>
     </AuthProvider>
   );
 }

@@ -16,6 +16,17 @@ router.post('/:studentId', async (req, res) => {
     const subject = await Subject.findById(subjectId);
     if (!subject) return res.status(404).json({ message: 'Subject not found' });
 
+    // Validate marks don't exceed maximum
+    if (marks_obtained > subject.max_marks) {
+      return res.status(400).json({
+        message: `Marks obtained (${marks_obtained}) cannot exceed maximum marks (${subject.max_marks})`,
+      });
+    }
+
+    if (marks_obtained < 0) {
+      return res.status(400).json({ message: 'Marks obtained cannot be negative' });
+    }
+
     let mark = await Marks.findOne({
       student: req.params.studentId,
       subject: subjectId,

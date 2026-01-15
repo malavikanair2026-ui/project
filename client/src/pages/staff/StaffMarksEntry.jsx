@@ -16,8 +16,7 @@ const StaffMarksEntry = () => {
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -33,7 +32,7 @@ const StaffMarksEntry = () => {
       setSubjects(subjectsRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      setError('Failed to load data');
+      showToast('Failed to load data', 'error');
     } finally {
       setLoading(false);
     }
@@ -45,14 +44,10 @@ const StaffMarksEntry = () => {
       ...formData,
       [name]: type === 'checkbox' ? checked : value,
     });
-    setError('');
-    setSuccess('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     setSubmitting(true);
 
     try {
@@ -62,19 +57,21 @@ const StaffMarksEntry = () => {
         exam_type: formData.exam_type,
         semester: formData.semester,
         is_final: formData.is_final,
-        entered_by: user._id,
       });
 
       // If final submission, calculate result
       if (formData.is_final) {
         try {
           await resultsAPI.calculate(formData.studentId, formData.semester);
+          showToast('Marks entered and result calculated successfully!', 'success');
         } catch (calcError) {
           console.error('Failed to calculate result:', calcError);
+          showToast('Marks saved but result calculation failed', 'warning');
         }
+      } else {
+        showToast('Marks entered successfully!', 'success');
       }
 
-      setSuccess('Marks entered successfully!');
       setFormData({
         studentId: '',
         subjectId: '',
@@ -84,22 +81,19 @@ const StaffMarksEntry = () => {
         is_final: false,
       });
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to save marks');
+      showToast(error.response?.data?.message || 'Failed to save marks', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) {
-    return <div style={styles.loading}>Loading...</div>;
+    return <LoadingSpinner message="Loading form..." />;
   }
 
   return (
     <div>
       <h2 style={styles.title}>Enter Marks</h2>
-
-      {error && <div style={styles.error}>{error}</div>}
-      {success && <div style={styles.success}>{success}</div>}
 
       <div style={styles.formCard}>
         <form onSubmit={handleSubmit}>
@@ -199,7 +193,11 @@ const StaffMarksEntry = () => {
           <button
             type="submit"
             disabled={submitting}
-            style={styles.submitButton}
+            style={{
+              ...styles.submitButton,
+              opacity: submitting ? 0.6 : 1,
+              cursor: submitting ? 'not-allowed' : 'pointer',
+            }}
           >
             {submitting ? 'Saving...' : 'Save Marks'}
           </button>
@@ -263,25 +261,6 @@ const styles = {
     fontSize: '16px',
     fontWeight: '500',
     cursor: 'pointer',
-  },
-  error: {
-    backgroundColor: '#fee',
-    color: '#c33',
-    padding: '12px',
-    borderRadius: '4px',
-    marginBottom: '20px',
-  },
-  success: {
-    backgroundColor: '#efe',
-    color: '#3c3',
-    padding: '12px',
-    borderRadius: '4px',
-    marginBottom: '20px',
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '40px',
-    fontSize: '18px',
   },
 };
 
