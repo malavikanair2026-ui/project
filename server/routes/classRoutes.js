@@ -59,11 +59,70 @@ router.put('/:classId', async (req, res) => {
     const updated = await ClassModel.findByIdAndUpdate(req.params.classId, req.body, {
       new: true,
       runValidators: true,
-    });
+    }).populate('subjects.subject subjects.teacher');
     if (!updated) return res.status(404).json({ message: 'Class not found' });
     res.json(updated);
   } catch (err) {
     res.status(400).json({ message: err.message || 'Failed to update class' });
+  }
+});
+
+// Delete class
+router.delete('/:classId', async (req, res) => {
+  try {
+    const deleted = await ClassModel.findByIdAndDelete(req.params.classId);
+    if (!deleted) return res.status(404).json({ message: 'Class not found' });
+    res.json({ message: 'Class deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message || 'Failed to delete class' });
+  }
+});
+
+// Remove subject from class
+router.delete('/:classId/subjects/:subjectId', async (req, res) => {
+  try {
+    const classDoc = await ClassModel.findById(req.params.classId);
+    if (!classDoc) return res.status(404).json({ message: 'Class not found' });
+
+    classDoc.subjects = classDoc.subjects.filter(
+      (subj) => subj._id.toString() !== req.params.subjectId
+    );
+    await classDoc.save();
+
+    const updated = await ClassModel.findById(req.params.classId).populate(
+      'subjects.subject subjects.teacher'
+    );
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to remove subject from class' });
+  }
+});
+
+// Update subject in class (update teacher assignment)
+router.put('/:classId/subjects/:subjectId', async (req, res) => {
+  try {
+    const { teacher } = req.body;
+    const classDoc = await ClassModel.findById(req.params.classId);
+    if (!classDoc) return res.status(404).json({ message: 'Class not found' });
+
+    const subjectIndex = classDoc.subjects.findIndex(
+      (subj) => subj._id.toString() === req.params.subjectId
+    );
+    if (subjectIndex === -1) {
+      return res.status(404).json({ message: 'Subject not found in class' });
+    }
+
+    if (teacher !== undefined) {
+      classDoc.subjects[subjectIndex].teacher = teacher || undefined;
+    }
+    await classDoc.save();
+
+    const updated = await ClassModel.findById(req.params.classId).populate(
+      'subjects.subject subjects.teacher'
+    );
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to update subject in class' });
   }
 });
 

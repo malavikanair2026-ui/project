@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { classesAPI, subjectsAPI, usersAPI } from '../../services/api';
+import { useToast } from '../../components/ToastContainer';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const ClassManagement = () => {
   const [classes, setClasses] = useState([]);
@@ -8,7 +10,10 @@ const ClassManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [showEditSubjectModal, setShowEditSubjectModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
+  const [editingClass, setEditingClass] = useState(null);
+  const [editingSubject, setEditingSubject] = useState(null);
   const [formData, setFormData] = useState({
     class_id: '',
     class_name: '',
@@ -17,7 +22,11 @@ const ClassManagement = () => {
     subject: '',
     teacher: '',
   });
+  const [editSubjectFormData, setEditSubjectFormData] = useState({
+    teacher: '',
+  });
   const [error, setError] = useState('');
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -62,12 +71,21 @@ const ClassManagement = () => {
     setError('');
 
     try {
-      await classesAPI.create(formData);
+      if (editingClass) {
+        await classesAPI.update(editingClass._id, formData);
+        showToast('Class updated successfully!', 'success');
+      } else {
+        await classesAPI.create(formData);
+        showToast('Class created successfully!', 'success');
+      }
       setShowModal(false);
+      setEditingClass(null);
       setFormData({ class_id: '', class_name: '' });
       fetchData();
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to save class');
+      const errorMsg = error.response?.data?.message || 'Failed to save class';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     }
   };
 
@@ -77,23 +95,106 @@ const ClassManagement = () => {
 
     try {
       await classesAPI.addSubject(selectedClass._id, subjectFormData);
+      showToast('Subject added successfully!', 'success');
       setShowSubjectModal(false);
       setSubjectFormData({ subject: '', teacher: '' });
       setSelectedClass(null);
       fetchData();
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to add subject');
+      const errorMsg = error.response?.data?.message || 'Failed to add subject';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     }
   };
 
+  const handleEdit = (classItem) => {
+    setEditingClass(classItem);
+    setFormData({
+      class_id: classItem.class_id,
+      class_name: classItem.class_name,
+    });
+    setShowModal(true);
+  };
+
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this class?')) return;
-    // Note: Delete endpoint not implemented, would need to be added
-    setError('Delete functionality not implemented yet');
+    if (!window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) return;
+    
+    try {
+      await classesAPI.delete(id);
+      showToast('Class deleted successfully!', 'success');
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to delete class';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleRemoveSubject = async (classId, subjectId) => {
+    if (!window.confirm('Are you sure you want to remove this subject from the class?')) return;
+
+    try {
+      await classesAPI.removeSubject(classId, subjectId);
+      showToast('Subject removed successfully!', 'success');
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to remove subject';
+      showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleEditSubject = (classItem, subjectItem) => {
+    setSelectedClass(classItem);
+    setEditingSubject(subjectItem);
+    setEditSubjectFormData({
+      teacher: subjectItem.teacher?._id || subjectItem.teacher || '',
+    });
+    setShowEditSubjectModal(true);
+  };
+
+  const handleUpdateSubject = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      await classesAPI.updateSubject(selectedClass._id, editingSubject._id, editSubjectFormData);
+      showToast('Subject updated successfully!', 'success');
+      setShowEditSubjectModal(false);
+      setSelectedClass(null);
+      setEditingSubject(null);
+      setEditSubjectFormData({ teacher: '' });
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to update subject';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingClass(null);
+    setFormData({ class_id: '', class_name: '' });
+    setError('');
+  };
+
+  const handleCloseSubjectModal = () => {
+    setShowSubjectModal(false);
+    setSelectedClass(null);
+    setSubjectFormData({ subject: '', teacher: '' });
+    setError('');
+  };
+
+  const handleCloseEditSubjectModal = () => {
+    setShowEditSubjectModal(false);
+    setSelectedClass(null);
+    setEditingSubject(null);
+    setEditSubjectFormData({ teacher: '' });
+    setError('');
   };
 
   if (loading) {
-    return <div style={styles.loading}>Loading...</div>;
+    return <LoadingSpinner message="Loading classes..." />;
   }
 
   return (
@@ -120,15 +221,33 @@ const ClassManagement = () => {
                 <ul style={styles.subjectsUl}>
                   {classItem.subjects.map((subj, idx) => (
                     <li key={idx} style={styles.subjectItem}>
-                      <strong>
-                        {subj.subject?.subject_name || 'Unknown Subject'}
-                      </strong>
-                      {subj.teacher && (
-                        <span style={styles.teacherName}>
-                          {' '}
-                          - Teacher: {subj.teacher?.name || 'Unassigned'}
-                        </span>
-                      )}
+                      <div style={styles.subjectInfo}>
+                        <strong>
+                          {subj.subject?.subject_name || 'Unknown Subject'}
+                        </strong>
+                        {subj.teacher && (
+                          <span style={styles.teacherName}>
+                            {' '}
+                            - Teacher: {subj.teacher?.name || 'Unassigned'}
+                          </span>
+                        )}
+                      </div>
+                      <div style={styles.subjectActions}>
+                        <button
+                          onClick={() => handleEditSubject(classItem, subj)}
+                          style={styles.editSubjectButton}
+                          title="Edit Subject"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleRemoveSubject(classItem._id, subj._id)}
+                          style={styles.removeSubjectButton}
+                          title="Remove Subject"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -145,6 +264,20 @@ const ClassManagement = () => {
                 + Add Subject
               </button>
             </div>
+            <div style={styles.cardActions}>
+              <button
+                onClick={() => handleEdit(classItem)}
+                style={styles.editButton}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDelete(classItem._id)}
+                style={styles.deleteButton}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ))}
         {classes.length === 0 && (
@@ -155,10 +288,12 @@ const ClassManagement = () => {
       {showModal && (
         <div
           style={styles.modalOverlay}
-          onClick={() => setShowModal(false)}
+          onClick={handleCloseModal}
         >
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>Add New Class</h3>
+            <h3 style={styles.modalTitle}>
+              {editingClass ? 'Edit Class' : 'Add New Class'}
+            </h3>
             <form onSubmit={handleSubmit}>
               <div style={styles.formGroup}>
                 <label>Class ID</label>
@@ -184,11 +319,11 @@ const ClassManagement = () => {
               </div>
               <div style={styles.modalActions}>
                 <button type="submit" style={styles.saveButton}>
-                  Create
+                  {editingClass ? 'Update' : 'Create'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={handleCloseModal}
                   style={styles.cancelButton}
                 >
                   Cancel
@@ -202,10 +337,7 @@ const ClassManagement = () => {
       {showSubjectModal && (
         <div
           style={styles.modalOverlay}
-          onClick={() => {
-            setShowSubjectModal(false);
-            setSelectedClass(null);
-          }}
+          onClick={handleCloseSubjectModal}
         >
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>
@@ -251,10 +383,59 @@ const ClassManagement = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowSubjectModal(false);
-                    setSelectedClass(null);
-                  }}
+                  onClick={handleCloseSubjectModal}
+                  style={styles.cancelButton}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditSubjectModal && (
+        <div
+          style={styles.modalOverlay}
+          onClick={handleCloseEditSubjectModal}
+        >
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>
+              Edit Subject in {selectedClass?.class_name}
+            </h3>
+            <form onSubmit={handleUpdateSubject}>
+              <div style={styles.formGroup}>
+                <label>Subject</label>
+                <input
+                  type="text"
+                  value={editingSubject?.subject?.subject_name || 'Unknown Subject'}
+                  disabled
+                  style={{ ...styles.input, backgroundColor: '#f5f5f5' }}
+                />
+              </div>
+              <div style={styles.formGroup}>
+                <label>Teacher</label>
+                <select
+                  name="teacher"
+                  value={editSubjectFormData.teacher}
+                  onChange={(e) => setEditSubjectFormData({ teacher: e.target.value })}
+                  style={styles.input}
+                >
+                  <option value="">No Teacher Assigned</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher._id} value={teacher._id}>
+                      {teacher.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={styles.modalActions}>
+                <button type="submit" style={styles.saveButton}>
+                  Update
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseEditSubjectModal}
                   style={styles.cancelButton}
                 >
                   Cancel
@@ -360,6 +541,69 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
     fontSize: '14px',
+    width: '100%',
+    marginTop: '10px',
+  },
+  subjectInfo: {
+    flex: 1,
+  },
+  subjectActions: {
+    display: 'flex',
+    gap: '5px',
+  },
+  editSubjectButton: {
+    padding: '4px 8px',
+    backgroundColor: '#f39c12',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  removeSubjectButton: {
+    padding: '4px 8px',
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  subjectItem: {
+    padding: '8px 0',
+    borderBottom: '1px solid #f0f0f0',
+    color: '#555',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  cardActions: {
+    display: 'flex',
+    gap: '10px',
+    paddingTop: '15px',
+    marginTop: '15px',
+    borderTop: '2px solid #f0f0f0',
+  },
+  editButton: {
+    padding: '8px 16px',
+    backgroundColor: '#3498db',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    flex: 1,
+  },
+  deleteButton: {
+    padding: '8px 16px',
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    flex: 1,
   },
   noData: {
     textAlign: 'center',

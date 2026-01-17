@@ -97,9 +97,13 @@ export const usersAPI = {
 // Classes API
 export const classesAPI = {
   getAll: (params = {}) => api.get('/classes', { params }),
+  getById: (id) => api.get(`/classes/${id}`),
   create: (data) => api.post('/classes', data),
-  addSubject: (classId, data) => api.post(`/classes/${classId}/subjects`, data),
   update: (classId, data) => api.put(`/classes/${classId}`, data),
+  delete: (classId) => api.delete(`/classes/${classId}`),
+  addSubject: (classId, data) => api.post(`/classes/${classId}/subjects`, data),
+  removeSubject: (classId, subjectId) => api.delete(`/classes/${classId}/subjects/${subjectId}`),
+  updateSubject: (classId, subjectId, data) => api.put(`/classes/${classId}/subjects/${subjectId}`, data),
 };
 
 // Feedback API
