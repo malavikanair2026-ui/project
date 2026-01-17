@@ -104,6 +104,8 @@ export const classesAPI = {
   addSubject: (classId, data) => api.post(`/classes/${classId}/subjects`, data),
   removeSubject: (classId, subjectId) => api.delete(`/classes/${classId}/subjects/${subjectId}`),
   updateSubject: (classId, subjectId, data) => api.put(`/classes/${classId}/subjects/${subjectId}`, data),
+  assignTeacher: (classId, teacherId, role = 'assigned') => api.post(`/classes/${classId}/assign-teacher`, { teacherId, role }),
+  removeTeacher: (classId, teacherId, role = 'assigned') => api.delete(`/classes/${classId}/remove-teacher/${teacherId}`, { params: { role } }),
 };
 
 // Feedback API

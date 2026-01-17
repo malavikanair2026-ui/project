@@ -11,9 +11,14 @@ const ClassManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showEditSubjectModal, setShowEditSubjectModal] = useState(false);
+  const [showAssignTeacherModal, setShowAssignTeacherModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [editingClass, setEditingClass] = useState(null);
   const [editingSubject, setEditingSubject] = useState(null);
+  const [teacherAssignmentData, setTeacherAssignmentData] = useState({
+    teacherId: '',
+    role: 'assigned', // 'class_teacher' or 'assigned'
+  });
   const [formData, setFormData] = useState({
     class_id: '',
     class_name: '',
@@ -82,7 +87,13 @@ const ClassManagement = () => {
 
     try {
       if (editingClass) {
+        if (!editingClass._id) {
+          console.error('No class ID provided for update');
+          showToast('Error: No class ID provided', 'error');
+          return;
+        }
         console.log('Updating class:', editingClass._id, formData);
+        console.log('Full URL will be:', `/api/classes/${editingClass._id}`);
         const response = await classesAPI.update(editingClass._id, formData);
         console.log('Update response:', response);
         showToast('Class updated successfully!', 'success');
@@ -98,7 +109,10 @@ const ClassManagement = () => {
       fetchData();
     } catch (error) {
       console.error('Submit error:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Failed to save class';
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      const errorMsg = error.response?.data?.message || error.message || `Failed to save class (Status: ${error.response?.status || 'Unknown'})`;
       setError(errorMsg);
       showToast(errorMsg, 'error');
     }
@@ -133,17 +147,27 @@ const ClassManagement = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!id) {
+      console.error('No class ID provided for deletion');
+      showToast('Error: No class ID provided', 'error');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) return;
     
     try {
       console.log('Deleting class with ID:', id);
+      console.log('Full URL will be:', `/api/classes/${id}`);
       const response = await classesAPI.delete(id);
       console.log('Delete response:', response);
       showToast('Class deleted successfully!', 'success');
       fetchData();
     } catch (error) {
       console.error('Delete error:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Failed to delete class';
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      const errorMsg = error.response?.data?.message || error.message || `Failed to delete class (Status: ${error.response?.status || 'Unknown'})`;
       setError(errorMsg);
       showToast(errorMsg, 'error');
     }
@@ -213,6 +237,57 @@ const ClassManagement = () => {
     setError('');
   };
 
+  const handleAssignTeacher = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!teacherAssignmentData.teacherId) {
+      showToast('Please select a teacher', 'error');
+      return;
+    }
+
+    try {
+      await classesAPI.assignTeacher(
+        selectedClass._id,
+        teacherAssignmentData.teacherId,
+        teacherAssignmentData.role
+      );
+      showToast(
+        teacherAssignmentData.role === 'class_teacher'
+          ? 'Class teacher assigned successfully!'
+          : 'Teacher assigned to class successfully!',
+        'success'
+      );
+      setShowAssignTeacherModal(false);
+      setSelectedClass(null);
+      setTeacherAssignmentData({ teacherId: '', role: 'assigned' });
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to assign teacher';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleRemoveTeacher = async (classId, teacherId, role = 'assigned') => {
+    if (!window.confirm(`Are you sure you want to remove this teacher from the class?`)) return;
+
+    try {
+      await classesAPI.removeTeacher(classId, teacherId, role);
+      showToast('Teacher removed from class successfully!', 'success');
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to remove teacher';
+      showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleOpenAssignTeacherModal = (classItem) => {
+    setSelectedClass(classItem);
+    setTeacherAssignmentData({ teacherId: '', role: 'assigned' });
+    setShowAssignTeacherModal(true);
+  };
+
   if (loading) {
     return <LoadingSpinner message="Loading classes..." />;
   }
@@ -234,6 +309,54 @@ const ClassManagement = () => {
             <div style={styles.classHeader}>
               <h3 style={styles.className}>{classItem.class_name}</h3>
               <span style={styles.classId}>ID: {classItem.class_id}</span>
+            </div>
+            <div style={styles.teachersList}>
+              <h4 style={styles.teachersTitle}>Assigned Teachers:</h4>
+              {classItem.class_teacher && (
+                <div style={styles.teacherItem}>
+                  <span style={styles.teacherRole}>👨‍🏫 Class Teacher:</span>
+                  <span style={styles.teacherName}>
+                    {classItem.class_teacher?.name || 'Unknown'}
+                  </span>
+                  <button
+                    onClick={() => handleRemoveTeacher(classItem._id, classItem.class_teacher._id || classItem.class_teacher, 'class_teacher')}
+                    style={styles.removeTeacherButton}
+                    title="Remove Class Teacher"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              {classItem.assigned_teachers && classItem.assigned_teachers.length > 0 && (
+                <>
+                  {classItem.assigned_teachers.map((teacher) => {
+                    const teacherId = teacher._id || teacher;
+                    const teacherName = teacher.name || 'Unknown';
+                    return (
+                      <div key={teacherId} style={styles.teacherItem}>
+                        <span style={styles.teacherRole}>👤 Teacher:</span>
+                        <span style={styles.teacherName}>{teacherName}</span>
+                        <button
+                          onClick={() => handleRemoveTeacher(classItem._id, teacherId, 'assigned')}
+                          style={styles.removeTeacherButton}
+                          title="Remove Teacher"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              {(!classItem.class_teacher && (!classItem.assigned_teachers || classItem.assigned_teachers.length === 0)) && (
+                <p style={styles.noTeachers}>No teachers assigned</p>
+              )}
+              <button
+                onClick={() => handleOpenAssignTeacherModal(classItem)}
+                style={styles.assignTeacherButton}
+              >
+                + Assign Teacher
+              </button>
             </div>
             <div style={styles.subjectsList}>
               <h4 style={styles.subjectsTitle}>Subjects:</h4>
@@ -289,6 +412,13 @@ const ClassManagement = () => {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
+                  console.log('Edit button clicked for class:', classItem);
+                  console.log('Class ID:', classItem._id);
+                  if (!classItem._id) {
+                    showToast('Error: Class ID is missing', 'error');
+                    return;
+                  }
                   handleEdit(classItem);
                 }}
                 style={styles.editButton}
@@ -299,6 +429,13 @@ const ClassManagement = () => {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
+                  console.log('Delete button clicked for class:', classItem);
+                  console.log('Class ID:', classItem._id);
+                  if (!classItem._id) {
+                    showToast('Error: Class ID is missing', 'error');
+                    return;
+                  }
                   handleDelete(classItem._id);
                 }}
                 style={styles.deleteButton}
@@ -473,6 +610,98 @@ const ClassManagement = () => {
           </div>
         </div>
       )}
+
+      {showAssignTeacherModal && (
+        <div
+          style={styles.modalOverlay}
+          onClick={() => {
+            setShowAssignTeacherModal(false);
+            setSelectedClass(null);
+            setTeacherAssignmentData({ teacherId: '', role: 'assigned' });
+          }}
+        >
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>
+              Assign Teacher to {selectedClass?.class_name}
+            </h3>
+            <form onSubmit={handleAssignTeacher}>
+              <div style={styles.formGroup}>
+                <label>Teacher</label>
+                <select
+                  name="teacherId"
+                  value={teacherAssignmentData.teacherId}
+                  onChange={(e) =>
+                    setTeacherAssignmentData({
+                      ...teacherAssignmentData,
+                      teacherId: e.target.value,
+                    })
+                  }
+                  required
+                  style={styles.input}
+                >
+                  <option value="">Select Teacher</option>
+                  {teachers
+                    .filter((teacher) => {
+                      // Exclude already assigned teachers
+                      const teacherId = teacher._id;
+                      const isClassTeacher =
+                        selectedClass?.class_teacher &&
+                        (selectedClass.class_teacher._id === teacherId ||
+                          selectedClass.class_teacher === teacherId);
+                      const isAssigned =
+                        selectedClass?.assigned_teachers?.some(
+                          (t) => (t._id || t) === teacherId
+                        );
+                      return !isClassTeacher && !isAssigned;
+                    })
+                    .map((teacher) => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.name} ({teacher.email})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label>Assignment Type</label>
+                <select
+                  name="role"
+                  value={teacherAssignmentData.role}
+                  onChange={(e) =>
+                    setTeacherAssignmentData({
+                      ...teacherAssignmentData,
+                      role: e.target.value,
+                    })
+                  }
+                  required
+                  style={styles.input}
+                >
+                  <option value="assigned">Assigned Teacher</option>
+                  <option value="class_teacher">Class Teacher (Homeroom)</option>
+                </select>
+                <small style={styles.helpText}>
+                  Class Teacher is the primary/homeroom teacher. Only one class teacher per class.
+                </small>
+              </div>
+              <div style={styles.modalActions}>
+                <button type="submit" style={styles.saveButton}>
+                  Assign Teacher
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAssignTeacherModal(false);
+                    setSelectedClass(null);
+                    setTeacherAssignmentData({ teacherId: '', role: 'assigned' });
+                  }}
+                  style={styles.cancelButton}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -571,6 +800,69 @@ const styles = {
     fontSize: '14px',
     width: '100%',
     marginTop: '10px',
+  },
+  teachersList: {
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #f0f0f0',
+  },
+  teachersTitle: {
+    fontSize: '16px',
+    marginBottom: '10px',
+    color: '#34495e',
+  },
+  teacherItem: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #f0f0f0',
+    gap: '10px',
+  },
+  teacherRole: {
+    color: '#7f8c8d',
+    fontSize: '14px',
+    fontWeight: '500',
+    minWidth: '120px',
+  },
+  teacherName: {
+    flex: 1,
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
+  removeTeacherButton: {
+    padding: '4px 8px',
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    minWidth: '24px',
+    height: '24px',
+  },
+  assignTeacherButton: {
+    padding: '8px 16px',
+    backgroundColor: '#9b59b6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    width: '100%',
+    marginTop: '10px',
+  },
+  noTeachers: {
+    color: '#95a5a6',
+    fontStyle: 'italic',
+    marginBottom: '10px',
+  },
+  helpText: {
+    display: 'block',
+    marginTop: '5px',
+    color: '#7f8c8d',
+    fontSize: '12px',
+    fontStyle: 'italic',
   },
   subjectInfo: {
     flex: 1,

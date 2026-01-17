@@ -25,6 +25,17 @@ const classSchema = new mongoose.Schema(
         },
       },
     ],
+    class_teacher: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    assigned_teachers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,
