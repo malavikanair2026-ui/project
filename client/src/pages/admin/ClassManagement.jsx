@@ -34,17 +34,27 @@ const ClassManagement = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [classesRes, subjectsRes, usersRes] = await Promise.all([
         classesAPI.getAll(),
         subjectsAPI.getAll(),
         usersAPI.getAll(),
       ]);
-      setClasses(classesRes.data);
-      setSubjects(subjectsRes.data);
-      setTeachers(usersRes.data.filter((u) => u.role === 'teacher'));
+      
+      // Handle response format - axios wraps responses in .data
+      const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
+      const subjectsData = Array.isArray(subjectsRes.data) ? subjectsRes.data : subjectsRes.data?.data || subjectsRes.data || [];
+      const usersData = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.data || usersRes.data || [];
+      
+      setClasses(classesData);
+      setSubjects(subjectsData);
+      setTeachers(usersData.filter((u) => u.role === 'teacher'));
+      setError('');
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      setError('Failed to load data');
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to load data';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -72,10 +82,14 @@ const ClassManagement = () => {
 
     try {
       if (editingClass) {
-        await classesAPI.update(editingClass._id, formData);
+        console.log('Updating class:', editingClass._id, formData);
+        const response = await classesAPI.update(editingClass._id, formData);
+        console.log('Update response:', response);
         showToast('Class updated successfully!', 'success');
       } else {
-        await classesAPI.create(formData);
+        console.log('Creating class:', formData);
+        const response = await classesAPI.create(formData);
+        console.log('Create response:', response);
         showToast('Class created successfully!', 'success');
       }
       setShowModal(false);
@@ -83,7 +97,8 @@ const ClassManagement = () => {
       setFormData({ class_id: '', class_name: '' });
       fetchData();
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'Failed to save class';
+      console.error('Submit error:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to save class';
       setError(errorMsg);
       showToast(errorMsg, 'error');
     }
@@ -108,6 +123,7 @@ const ClassManagement = () => {
   };
 
   const handleEdit = (classItem) => {
+    console.log('Editing class:', classItem);
     setEditingClass(classItem);
     setFormData({
       class_id: classItem.class_id,
@@ -120,11 +136,14 @@ const ClassManagement = () => {
     if (!window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) return;
     
     try {
-      await classesAPI.delete(id);
+      console.log('Deleting class with ID:', id);
+      const response = await classesAPI.delete(id);
+      console.log('Delete response:', response);
       showToast('Class deleted successfully!', 'success');
       fetchData();
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'Failed to delete class';
+      console.error('Delete error:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to delete class';
       setError(errorMsg);
       showToast(errorMsg, 'error');
     }
@@ -176,6 +195,7 @@ const ClassManagement = () => {
     setEditingClass(null);
     setFormData({ class_id: '', class_name: '' });
     setError('');
+    console.log('Modal closed, form reset');
   };
 
   const handleCloseSubjectModal = () => {
@@ -266,16 +286,24 @@ const ClassManagement = () => {
             </div>
             <div style={styles.cardActions}>
               <button
-                onClick={() => handleEdit(classItem)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(classItem);
+                }}
                 style={styles.editButton}
               >
-                Edit
+                ✏️ Edit
               </button>
               <button
-                onClick={() => handleDelete(classItem._id)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(classItem._id);
+                }}
                 style={styles.deleteButton}
               >
-                Delete
+                🗑️ Delete
               </button>
             </div>
           </div>
@@ -594,6 +622,11 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px',
     flex: 1,
+    fontWeight: '500',
+    transition: 'background-color 0.2s',
+  },
+  editButtonHover: {
+    backgroundColor: '#2980b9',
   },
   deleteButton: {
     padding: '8px 16px',
@@ -604,6 +637,11 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px',
     flex: 1,
+    fontWeight: '500',
+    transition: 'background-color 0.2s',
+  },
+  deleteButtonHover: {
+    backgroundColor: '#c0392b',
   },
   noData: {
     textAlign: 'center',
