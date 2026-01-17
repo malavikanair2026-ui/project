@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
-import { resultsAPI, studentsAPI, subjectsAPI } from '../../services/api';
+import { resultsAPI, studentsAPI, analyticsAPI } from '../../services/api';
+import { useToast } from '../../components/ToastContainer';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const Analytics = () => {
-  const [analytics, setAnalytics] = useState({
+  const [activeTab, setActiveTab] = useState('overview');
+  const [semesterFilter, setSemesterFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [overview, setOverview] = useState({
     totalStudents: 0,
     totalResults: 0,
     passCount: 0,
@@ -11,38 +16,45 @@ const Analytics = () => {
     gradeDistribution: {},
     topPerformers: [],
   });
-  const [loading, setLoading] = useState(true);
+  const [classPerformance, setClassPerformance] = useState({});
+  const [subjectAnalysis, setSubjectAnalysis] = useState({});
+  const [rankings, setRankings] = useState([]);
+  const { showToast } = useToast();
 
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    fetchOverview();
+  }, [semesterFilter]);
 
-  const fetchAnalytics = async () => {
+  useEffect(() => {
+    if (activeTab === 'class') {
+      fetchClassPerformance();
+    } else if (activeTab === 'subject') {
+      fetchSubjectAnalysis();
+    } else if (activeTab === 'rankings') {
+      fetchRankings();
+    }
+  }, [activeTab, semesterFilter]);
+
+  const fetchOverview = async () => {
     try {
       const [resultsRes, studentsRes] = await Promise.all([
         resultsAPI.getAll(),
         studentsAPI.getAll(),
       ]);
 
-      const results = resultsRes.data;
+      const results = resultsRes.data.filter((r) => !semesterFilter || r.semester === semesterFilter);
       const students = studentsRes.data;
 
-      // Calculate pass/fail (assuming F is fail)
       const passCount = results.filter((r) => r.grade !== 'F').length;
       const failCount = results.filter((r) => r.grade === 'F').length;
-
-      // Calculate average percentage
       const totalPercentage = results.reduce((sum, r) => sum + r.percentage, 0);
-      const averagePercentage =
-        results.length > 0 ? totalPercentage / results.length : 0;
+      const averagePercentage = results.length > 0 ? totalPercentage / results.length : 0;
 
-      // Grade distribution
       const gradeDistribution = {};
       results.forEach((r) => {
         gradeDistribution[r.grade] = (gradeDistribution[r.grade] || 0) + 1;
       });
 
-      // Top performers (top 10 by percentage)
       const topPerformers = [...results]
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, 10)
@@ -50,9 +62,10 @@ const Analytics = () => {
           name: r.student?.name || 'Unknown',
           percentage: r.percentage,
           grade: r.grade,
+          studentId: r.student?.student_id || 'N/A',
         }));
 
-      setAnalytics({
+      setOverview({
         totalStudents: students.length,
         totalResults: results.length,
         passCount,
@@ -62,134 +75,394 @@ const Analytics = () => {
         topPerformers,
       });
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+      console.error('Failed to fetch overview:', error);
+      showToast('Failed to load analytics', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div style={styles.loading}>Loading analytics...</div>;
+  const fetchClassPerformance = async () => {
+    try {
+      const response = await analyticsAPI.getClassPerformance(semesterFilter);
+      setClassPerformance(response.data);
+    } catch (error) {
+      console.error('Failed to fetch class performance:', error);
+      showToast('Failed to load class performance', 'error');
+    }
+  };
+
+  const fetchSubjectAnalysis = async () => {
+    try {
+      const response = await analyticsAPI.getSubjectAnalysis(semesterFilter);
+      setSubjectAnalysis(response.data);
+    } catch (error) {
+      console.error('Failed to fetch subject analysis:', error);
+      showToast('Failed to load subject analysis', 'error');
+    }
+  };
+
+  const fetchRankings = async () => {
+    try {
+      const response = await analyticsAPI.getRankings(semesterFilter);
+      setRankings(response.data);
+    } catch (error) {
+      console.error('Failed to fetch rankings:', error);
+      showToast('Failed to load rankings', 'error');
+    }
+  };
+
+  if (loading && activeTab === 'overview') {
+    return <LoadingSpinner message="Loading analytics..." />;
   }
 
   const passRate =
-    analytics.totalResults > 0
-      ? ((analytics.passCount / analytics.totalResults) * 100).toFixed(1)
+    overview.totalResults > 0
+      ? ((overview.passCount / overview.totalResults) * 100).toFixed(1)
       : 0;
 
   return (
     <div>
-      <h2 style={styles.title}>Analytics & Reports</h2>
-
-      <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>🎓</div>
-          <div style={styles.statInfo}>
-            <div style={styles.statValue}>{analytics.totalStudents}</div>
-            <div style={styles.statLabel}>Total Students</div>
-          </div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>📋</div>
-          <div style={styles.statInfo}>
-            <div style={styles.statValue}>{analytics.totalResults}</div>
-            <div style={styles.statLabel}>Total Results</div>
-          </div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>✅</div>
-          <div style={styles.statInfo}>
-            <div style={styles.statValue}>{analytics.passCount}</div>
-            <div style={styles.statLabel}>Passed</div>
-          </div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>❌</div>
-          <div style={styles.statInfo}>
-            <div style={styles.statValue}>{analytics.failCount}</div>
-            <div style={styles.statLabel}>Failed</div>
-          </div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>📊</div>
-          <div style={styles.statInfo}>
-            <div style={styles.statValue}>{passRate}%</div>
-            <div style={styles.statLabel}>Pass Rate</div>
-          </div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>📈</div>
-          <div style={styles.statInfo}>
-            <div style={styles.statValue}>
-              {analytics.averagePercentage.toFixed(1)}%
-            </div>
-            <div style={styles.statLabel}>Average Percentage</div>
-          </div>
+      <div style={styles.header}>
+        <h2 style={styles.title}>Analytics & Reports</h2>
+        <div style={styles.filterContainer}>
+          <label style={styles.filterLabel}>Semester:</label>
+          <input
+            type="text"
+            value={semesterFilter}
+            onChange={(e) => setSemesterFilter(e.target.value)}
+            placeholder="Filter by semester (optional)"
+            style={styles.filterInput}
+          />
         </div>
       </div>
 
-      <div style={styles.grid}>
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Grade Distribution</h3>
-          <div style={styles.gradeList}>
-            {Object.entries(analytics.gradeDistribution).map(([grade, count]) => (
-              <div key={grade} style={styles.gradeItem}>
-                <span style={styles.gradeLabel}>Grade {grade}:</span>
-                <span style={styles.gradeCount}>{count} students</span>
+      <div style={styles.tabs}>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'overview' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('overview')}
+        >
+          Overview
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'class' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('class')}
+        >
+          Class-wise Performance
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'subject' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('subject')}
+        >
+          Subject-wise Analysis
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'rankings' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('rankings')}
+        >
+          Full Rankings
+        </button>
+      </div>
+
+      {activeTab === 'overview' && (
+        <div>
+          <div style={styles.statsGrid}>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>🎓</div>
+              <div style={styles.statInfo}>
+                <div style={styles.statValue}>{overview.totalStudents}</div>
+                <div style={styles.statLabel}>Total Students</div>
               </div>
-            ))}
-            {Object.keys(analytics.gradeDistribution).length === 0 && (
-              <p style={styles.noData}>No data available</p>
-            )}
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>📋</div>
+              <div style={styles.statInfo}>
+                <div style={styles.statValue}>{overview.totalResults}</div>
+                <div style={styles.statLabel}>Total Results</div>
+              </div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>✅</div>
+              <div style={styles.statInfo}>
+                <div style={styles.statValue}>{overview.passCount}</div>
+                <div style={styles.statLabel}>Passed</div>
+              </div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>❌</div>
+              <div style={styles.statInfo}>
+                <div style={styles.statValue}>{overview.failCount}</div>
+                <div style={styles.statLabel}>Failed</div>
+              </div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>📊</div>
+              <div style={styles.statInfo}>
+                <div style={styles.statValue}>{passRate}%</div>
+                <div style={styles.statLabel}>Pass Rate</div>
+              </div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>📈</div>
+              <div style={styles.statInfo}>
+                <div style={styles.statValue}>{overview.averagePercentage.toFixed(1)}%</div>
+                <div style={styles.statLabel}>Average Percentage</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.grid}>
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Grade Distribution</h3>
+              <div style={styles.gradeList}>
+                {Object.entries(overview.gradeDistribution).map(([grade, count]) => (
+                  <div key={grade} style={styles.gradeItem}>
+                    <span style={styles.gradeLabel}>Grade {grade}:</span>
+                    <span style={styles.gradeCount}>{count} students</span>
+                  </div>
+                ))}
+                {Object.keys(overview.gradeDistribution).length === 0 && (
+                  <p style={styles.noData}>No data available</p>
+                )}
+              </div>
+            </div>
+
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Top 10 Performers</h3>
+              <div style={styles.topPerformersList}>
+                {overview.topPerformers.length > 0 ? (
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Rank</th>
+                        <th style={styles.th}>Student ID</th>
+                        <th style={styles.th}>Name</th>
+                        <th style={styles.th}>Percentage</th>
+                        <th style={styles.th}>Grade</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {overview.topPerformers.map((student, index) => (
+                        <tr key={index}>
+                          <td style={styles.td}>{index + 1}</td>
+                          <td style={styles.td}>{student.studentId}</td>
+                          <td style={styles.td}>{student.name}</td>
+                          <td style={styles.td}>{student.percentage.toFixed(2)}%</td>
+                          <td style={styles.td}>
+                            <span style={styles.gradeBadge}>{student.grade}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={styles.noData}>No data available</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Top Performers</h3>
-          <div style={styles.topPerformersList}>
-            {analytics.topPerformers.length > 0 ? (
-              <table style={styles.topTable}>
+      {activeTab === 'class' && (
+        <div>
+          {Object.keys(classPerformance).length > 0 ? (
+            <div style={styles.classGrid}>
+              {Object.values(classPerformance).map((classData) => (
+                <div key={classData.className} style={styles.classCard}>
+                  <h3 style={styles.classTitle}>{classData.className}</h3>
+                  <div style={styles.classStats}>
+                    <div style={styles.classStatItem}>
+                      <span style={styles.classStatLabel}>Average:</span>
+                      <span style={styles.classStatValue}>
+                        {classData.averagePercentage.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div style={styles.classStatItem}>
+                      <span style={styles.classStatLabel}>Pass Rate:</span>
+                      <span style={styles.classStatValue}>
+                        {classData.passRate.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={styles.classStatItem}>
+                      <span style={styles.classStatLabel}>Students:</span>
+                      <span style={styles.classStatValue}>{classData.totalStudents}</span>
+                    </div>
+                    <div style={styles.classStatItem}>
+                      <span style={styles.classStatLabel}>Results:</span>
+                      <span style={styles.classStatValue}>{classData.resultsCount}</span>
+                    </div>
+                  </div>
+                  <div style={styles.progressBarContainer}>
+                    <div
+                      style={{
+                        ...styles.progressBar,
+                        width: `${Math.min(classData.averagePercentage, 100)}%`,
+                        backgroundColor:
+                          classData.averagePercentage >= 80
+                            ? '#27ae60'
+                            : classData.averagePercentage >= 60
+                            ? '#3498db'
+                            : classData.averagePercentage >= 40
+                            ? '#f39c12'
+                            : '#e74c3c',
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.noDataCard}>No class performance data available</div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'subject' && (
+        <div>
+          {Object.keys(subjectAnalysis).length > 0 ? (
+            <div style={styles.subjectGrid}>
+              {Object.values(subjectAnalysis).map((subject) => (
+                <div key={subject.subjectId} style={styles.subjectCard}>
+                  <h3 style={styles.subjectTitle}>{subject.subjectName}</h3>
+                  <div style={styles.subjectStats}>
+                    <div style={styles.subjectStatRow}>
+                      <span>Average Marks:</span>
+                      <strong>{subject.averageMarks.toFixed(2)} / {subject.maxMarks}</strong>
+                    </div>
+                    <div style={styles.subjectStatRow}>
+                      <span>Average %:</span>
+                      <strong>{subject.averagePercentage.toFixed(2)}%</strong>
+                    </div>
+                    <div style={styles.subjectStatRow}>
+                      <span>Pass Rate:</span>
+                      <strong>{subject.passRate.toFixed(1)}%</strong>
+                    </div>
+                    <div style={styles.subjectStatRow}>
+                      <span>Total Attempts:</span>
+                      <strong>{subject.count}</strong>
+                    </div>
+                  </div>
+                  {subject.topScorers.length > 0 && (
+                    <div style={styles.topScorersSection}>
+                      <strong>Top Scorers:</strong>
+                      <ol style={styles.topScorersList}>
+                        {subject.topScorers.slice(0, 5).map((scorer, idx) => (
+                          <li key={idx} style={styles.topScorerItem}>
+                            {scorer.studentName} - {scorer.marks}/{subject.maxMarks} ({scorer.percentage.toFixed(1)}%)
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.noDataCard}>No subject analysis data available</div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'rankings' && (
+        <div>
+          {rankings.length > 0 ? (
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th>Rank</th>
-                    <th>Student</th>
-                    <th>Percentage</th>
-                    <th>Grade</th>
+                    <th style={styles.th}>Rank</th>
+                    <th style={styles.th}>Student ID</th>
+                    <th style={styles.th}>Name</th>
+                    <th style={styles.th}>Class</th>
+                    <th style={styles.th}>Section</th>
+                    <th style={styles.th}>Semester</th>
+                    <th style={styles.th}>Total Marks</th>
+                    <th style={styles.th}>Percentage</th>
+                    <th style={styles.th}>Grade</th>
+                    <th style={styles.th}>SGPA</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {analytics.topPerformers.map((student, index) => (
+                  {rankings.map((student, index) => (
                     <tr key={index}>
-                      <td>{index + 1}</td>
-                      <td>{student.name}</td>
-                      <td>{student.percentage.toFixed(2)}%</td>
-                      <td>
+                      <td style={styles.td}>
+                        <strong>{student.rank}</strong>
+                      </td>
+                      <td style={styles.td}>{student.studentId}</td>
+                      <td style={styles.td}>{student.name}</td>
+                      <td style={styles.td}>{student.class}</td>
+                      <td style={styles.td}>{student.section}</td>
+                      <td style={styles.td}>{student.semester}</td>
+                      <td style={styles.td}>{student.totalMarks}</td>
+                      <td style={styles.td}>{student.percentage.toFixed(2)}%</td>
+                      <td style={styles.td}>
                         <span style={styles.gradeBadge}>{student.grade}</span>
                       </td>
+                      <td style={styles.td}>{student.sgpa.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <p style={styles.noData}>No data available</p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div style={styles.noDataCard}>No rankings data available</div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
 const styles = {
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '15px',
+  },
   title: {
     fontSize: '28px',
     color: '#2c3e50',
+    margin: 0,
+  },
+  filterContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  filterLabel: {
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  filterInput: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+  },
+  tabs: {
+    display: 'flex',
+    gap: '10px',
     marginBottom: '30px',
+    borderBottom: '2px solid #e0e0e0',
+  },
+  tab: {
+    padding: '12px 24px',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '3px solid transparent',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: '500',
+    color: '#7f8c8d',
+    transition: 'all 0.3s',
+  },
+  tabActive: {
+    color: '#3498db',
+    borderBottomColor: '#3498db',
   },
   statsGrid: {
     display: 'grid',
@@ -261,9 +534,17 @@ const styles = {
   topPerformersList: {
     overflowX: 'auto',
   },
-  topTable: {
+  tableContainer: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    overflowX: 'auto',
+  },
+  table: {
     width: '100%',
     borderCollapse: 'collapse',
+    minWidth: '800px',
   },
   th: {
     padding: '12px',
@@ -290,10 +571,101 @@ const styles = {
     color: '#7f8c8d',
     padding: '20px',
   },
-  loading: {
+  noDataCard: {
     textAlign: 'center',
+    color: '#7f8c8d',
     padding: '40px',
-    fontSize: '18px',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  classGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+    gap: '20px',
+  },
+  classCard: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  classTitle: {
+    marginTop: 0,
+    marginBottom: '15px',
+    fontSize: '20px',
+    color: '#2c3e50',
+  },
+  classStats: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '10px',
+    marginBottom: '15px',
+  },
+  classStatItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+  },
+  classStatLabel: {
+    color: '#7f8c8d',
+  },
+  classStatValue: {
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: '20px',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    marginTop: '10px',
+  },
+  progressBar: {
+    height: '100%',
+    transition: 'width 0.3s',
+  },
+  subjectGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+    gap: '20px',
+  },
+  subjectCard: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  subjectTitle: {
+    marginTop: 0,
+    marginBottom: '15px',
+    fontSize: '20px',
+    color: '#2c3e50',
+  },
+  subjectStats: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginBottom: '15px',
+  },
+  subjectStatRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #f0f0f0',
+  },
+  topScorersSection: {
+    marginTop: '15px',
+    paddingTop: '15px',
+    borderTop: '2px solid #f0f0f0',
+  },
+  topScorersList: {
+    marginTop: '10px',
+    paddingLeft: '20px',
+  },
+  topScorerItem: {
+    padding: '5px 0',
+    color: '#555',
   },
 };
 

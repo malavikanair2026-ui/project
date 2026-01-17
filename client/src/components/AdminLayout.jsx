@@ -14,6 +14,7 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/students', label: 'Manage Students', icon: '🎓' },
     { path: '/admin/subjects', label: 'Manage Subjects', icon: '📚' },
     { path: '/admin/classes', label: 'Manage Classes', icon: '🏫' },
+    { path: '/admin/grading-schema', label: 'Grading Schema', icon: '⚙️' },
     { path: '/admin/results', label: 'View Results', icon: '📋' },
     { path: '/admin/analytics', label: 'Analytics', icon: '📈' },
   ];

@@ -13,6 +13,7 @@ import SubjectManagement from './pages/admin/SubjectManagement';
 import ClassManagement from './pages/admin/ClassManagement';
 import ResultsView from './pages/admin/ResultsView';
 import Analytics from './pages/admin/Analytics';
+import GradingSchema from './pages/admin/GradingSchema';
 import TeacherLayout from './components/TeacherLayout';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
@@ -113,6 +114,16 @@ function App() {
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminLayout>
                 <Analytics />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/grading-schema"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout>
+                <GradingSchema />
               </AdminLayout>
             </ProtectedRoute>
           }

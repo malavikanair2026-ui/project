@@ -115,4 +115,43 @@ export const notificationsAPI = {
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
 };
 
+// Grading Schema API
+export const gradingSchemaAPI = {
+  getAll: () => api.get('/grading-schemas'),
+  getActive: () => api.get('/grading-schemas/active'),
+  getById: (id) => api.get(`/grading-schemas/${id}`),
+  create: (data) => api.post('/grading-schemas', data),
+  update: (id, data) => api.put(`/grading-schemas/${id}`, data),
+  delete: (id) => api.delete(`/grading-schemas/${id}`),
+};
+
+// Analytics API
+export const analyticsAPI = {
+  getClassPerformance: (semester) => {
+    const params = semester ? { semester } : {};
+    return api.get('/analytics/class-performance', { params });
+  },
+  getSubjectAnalysis: (semester) => {
+    const params = semester ? { semester } : {};
+    return api.get('/analytics/subject-analysis', { params });
+  },
+  getRankings: (semester, className) => {
+    const params = {};
+    if (semester) params.semester = semester;
+    if (className) params.class = className;
+    return api.get('/analytics/rankings', { params });
+  },
+  getToppers: (limit = 10, semester) => {
+    const params = { limit };
+    if (semester) params.semester = semester;
+    return api.get('/analytics/toppers', { params });
+  },
+  getPassFail: (semester, className) => {
+    const params = {};
+    if (semester) params.semester = semester;
+    if (className) params.class = className;
+    return api.get('/analytics/pass-fail', { params });
+  },
+};
+
 export default api;
