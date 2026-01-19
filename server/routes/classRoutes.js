@@ -157,6 +157,121 @@ router.delete('/:classId/remove-teacher/:teacherId', async (req, res) => {
   }
 });
 
+// Add semester to class
+router.post('/:classId/semesters', async (req, res) => {
+  try {
+    const { semester_name, start_date, end_date, is_active } = req.body;
+    
+    if (!semester_name) {
+      return res.status(400).json({ message: 'semester_name is required' });
+    }
+
+    const classDoc = await ClassModel.findById(req.params.classId);
+    if (!classDoc) return res.status(404).json({ message: 'Class not found' });
+
+    // Check if semester already exists
+    const semesterExists = classDoc.semesters.some(
+      (s) => s.semester_name.toLowerCase() === semester_name.toLowerCase()
+    );
+    if (semesterExists) {
+      return res.status(400).json({ message: 'Semester already exists for this class' });
+    }
+
+    // If setting as active, deactivate other semesters
+    if (is_active === true) {
+      classDoc.semesters.forEach((s) => {
+        s.is_active = false;
+      });
+    }
+
+    classDoc.semesters.push({
+      semester_name,
+      start_date: start_date ? new Date(start_date) : undefined,
+      end_date: end_date ? new Date(end_date) : undefined,
+      is_active: is_active || false,
+    });
+
+    await classDoc.save();
+    const updated = await ClassModel.findById(req.params.classId)
+      .populate('subjects.subject subjects.teacher')
+      .populate('class_teacher', 'name email')
+      .populate('assigned_teachers', 'name email');
+
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to add semester to class' });
+  }
+});
+
+// Update semester in class
+router.put('/:classId/semesters/:semesterId', async (req, res) => {
+  try {
+    const { semester_name, start_date, end_date, is_active } = req.body;
+
+    const classDoc = await ClassModel.findById(req.params.classId);
+    if (!classDoc) return res.status(404).json({ message: 'Class not found' });
+
+    const semesterIndex = classDoc.semesters.findIndex(
+      (s) => s._id.toString() === req.params.semesterId
+    );
+    if (semesterIndex === -1) {
+      return res.status(404).json({ message: 'Semester not found in class' });
+    }
+
+    // If setting as active, deactivate other semesters
+    if (is_active === true) {
+      classDoc.semesters.forEach((s, idx) => {
+        if (idx !== semesterIndex) {
+          s.is_active = false;
+        }
+      });
+    }
+
+    if (semester_name) classDoc.semesters[semesterIndex].semester_name = semester_name;
+    if (start_date !== undefined) {
+      classDoc.semesters[semesterIndex].start_date = start_date ? new Date(start_date) : null;
+    }
+    if (end_date !== undefined) {
+      classDoc.semesters[semesterIndex].end_date = end_date ? new Date(end_date) : null;
+    }
+    if (is_active !== undefined) {
+      classDoc.semesters[semesterIndex].is_active = is_active;
+    }
+
+    await classDoc.save();
+    const updated = await ClassModel.findById(req.params.classId)
+      .populate('subjects.subject subjects.teacher')
+      .populate('class_teacher', 'name email')
+      .populate('assigned_teachers', 'name email');
+
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to update semester in class' });
+  }
+});
+
+// Remove semester from class
+router.delete('/:classId/semesters/:semesterId', async (req, res) => {
+  try {
+    const classDoc = await ClassModel.findById(req.params.classId);
+    if (!classDoc) return res.status(404).json({ message: 'Class not found' });
+
+    classDoc.semesters = classDoc.semesters.filter(
+      (s) => s._id.toString() !== req.params.semesterId
+    );
+    await classDoc.save();
+
+    const updated = await ClassModel.findById(req.params.classId)
+      .populate('subjects.subject subjects.teacher')
+      .populate('class_teacher', 'name email')
+      .populate('assigned_teachers', 'name email');
+
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to remove semester from class' });
+  }
+});
+
 // Delete class
 router.delete('/:classId', async (req, res) => {
   try {

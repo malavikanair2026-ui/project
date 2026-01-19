@@ -12,9 +12,11 @@ const ClassManagement = () => {
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showEditSubjectModal, setShowEditSubjectModal] = useState(false);
   const [showAssignTeacherModal, setShowAssignTeacherModal] = useState(false);
+  const [showSemesterModal, setShowSemesterModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [editingClass, setEditingClass] = useState(null);
   const [editingSubject, setEditingSubject] = useState(null);
+  const [editingSemester, setEditingSemester] = useState(null);
   const [teacherAssignmentData, setTeacherAssignmentData] = useState({
     teacherId: '',
     role: 'assigned', // 'class_teacher' or 'assigned'
@@ -29,6 +31,12 @@ const ClassManagement = () => {
   });
   const [editSubjectFormData, setEditSubjectFormData] = useState({
     teacher: '',
+  });
+  const [semesterFormData, setSemesterFormData] = useState({
+    semester_name: '',
+    start_date: '',
+    end_date: '',
+    is_active: false,
   });
   const [error, setError] = useState('');
   const { showToast } = useToast();
@@ -288,6 +296,74 @@ const ClassManagement = () => {
     setShowAssignTeacherModal(true);
   };
 
+  const handleOpenSemesterModal = (classItem, semesterItem = null) => {
+    setSelectedClass(classItem);
+    if (semesterItem) {
+      setEditingSemester(semesterItem);
+      setSemesterFormData({
+        semester_name: semesterItem.semester_name,
+        start_date: semesterItem.start_date
+          ? new Date(semesterItem.start_date).toISOString().split('T')[0]
+          : '',
+        end_date: semesterItem.end_date
+          ? new Date(semesterItem.end_date).toISOString().split('T')[0]
+          : '',
+        is_active: semesterItem.is_active || false,
+      });
+    } else {
+      setEditingSemester(null);
+      setSemesterFormData({
+        semester_name: '',
+        start_date: '',
+        end_date: '',
+        is_active: false,
+      });
+    }
+    setShowSemesterModal(true);
+  };
+
+  const handleSubmitSemester = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!semesterFormData.semester_name.trim()) {
+      showToast('Please enter a semester name', 'error');
+      return;
+    }
+
+    try {
+      if (editingSemester) {
+        await classesAPI.updateSemester(selectedClass._id, editingSemester._id, semesterFormData);
+        showToast('Semester updated successfully!', 'success');
+      } else {
+        await classesAPI.addSemester(selectedClass._id, semesterFormData);
+        showToast('Semester added successfully!', 'success');
+      }
+      setShowSemesterModal(false);
+      setSelectedClass(null);
+      setEditingSemester(null);
+      setSemesterFormData({ semester_name: '', start_date: '', end_date: '', is_active: false });
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to save semester';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleRemoveSemester = async (classId, semesterId) => {
+    if (!window.confirm('Are you sure you want to remove this semester from the class?')) return;
+
+    try {
+      await classesAPI.removeSemester(classId, semesterId);
+      showToast('Semester removed successfully!', 'success');
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to remove semester';
+      showToast(errorMsg, 'error');
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner message="Loading classes..." />;
   }
@@ -356,6 +432,54 @@ const ClassManagement = () => {
                 style={styles.assignTeacherButton}
               >
                 + Assign Teacher
+              </button>
+            </div>
+            <div style={styles.semestersList}>
+              <h4 style={styles.semestersTitle}>Semesters:</h4>
+              {classItem.semesters && classItem.semesters.length > 0 ? (
+                <ul style={styles.semestersUl}>
+                  {classItem.semesters.map((semester, idx) => (
+                    <li key={semester._id || idx} style={styles.semesterItem}>
+                      <div style={styles.semesterInfo}>
+                        <strong>{semester.semester_name}</strong>
+                        {semester.is_active && (
+                          <span style={styles.activeSemesterBadge}>Active</span>
+                        )}
+                        {(semester.start_date || semester.end_date) && (
+                          <span style={styles.semesterDates}>
+                            {' '}
+                            {semester.start_date && new Date(semester.start_date).toLocaleDateString()}
+                            {semester.end_date && ' - ' + new Date(semester.end_date).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      <div style={styles.semesterActions}>
+                        <button
+                          onClick={() => handleOpenSemesterModal(classItem, semester)}
+                          style={styles.editSemesterButton}
+                          title="Edit Semester"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleRemoveSemester(classItem._id, semester._id)}
+                          style={styles.removeSemesterButton}
+                          title="Remove Semester"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={styles.noSemesters}>No semesters added</p>
+              )}
+              <button
+                onClick={() => handleOpenSemesterModal(classItem)}
+                style={styles.addSemesterButton}
+              >
+                + Add Semester
               </button>
             </div>
             <div style={styles.subjectsList}>
@@ -702,6 +826,110 @@ const ClassManagement = () => {
           </div>
         </div>
       )}
+
+      {showSemesterModal && (
+        <div
+          style={styles.modalOverlay}
+          onClick={() => {
+            setShowSemesterModal(false);
+            setSelectedClass(null);
+            setEditingSemester(null);
+            setSemesterFormData({ semester_name: '', start_date: '', end_date: '', is_active: false });
+          }}
+        >
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>
+              {editingSemester ? 'Edit Semester' : 'Add Semester to'} {selectedClass?.class_name}
+            </h3>
+            <form onSubmit={handleSubmitSemester}>
+              <div style={styles.formGroup}>
+                <label>Semester Name</label>
+                <input
+                  type="text"
+                  name="semester_name"
+                  value={semesterFormData.semester_name}
+                  onChange={(e) =>
+                    setSemesterFormData({
+                      ...semesterFormData,
+                      semester_name: e.target.value,
+                    })
+                  }
+                  required
+                  placeholder="e.g., Sem1, 2024-1, Fall 2024"
+                  style={styles.input}
+                />
+              </div>
+              <div style={styles.formGroup}>
+                <label>Start Date (Optional)</label>
+                <input
+                  type="date"
+                  name="start_date"
+                  value={semesterFormData.start_date}
+                  onChange={(e) =>
+                    setSemesterFormData({
+                      ...semesterFormData,
+                      start_date: e.target.value,
+                    })
+                  }
+                  style={styles.input}
+                />
+              </div>
+              <div style={styles.formGroup}>
+                <label>End Date (Optional)</label>
+                <input
+                  type="date"
+                  name="end_date"
+                  value={semesterFormData.end_date}
+                  onChange={(e) =>
+                    setSemesterFormData({
+                      ...semesterFormData,
+                      end_date: e.target.value,
+                    })
+                  }
+                  style={styles.input}
+                />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    name="is_active"
+                    checked={semesterFormData.is_active}
+                    onChange={(e) =>
+                      setSemesterFormData({
+                        ...semesterFormData,
+                        is_active: e.target.checked,
+                      })
+                    }
+                    style={styles.checkbox}
+                  />
+                  Set as Active Semester
+                </label>
+                <small style={styles.helpText}>
+                  Only one semester can be active at a time. The active semester will be used for default operations.
+                </small>
+              </div>
+              <div style={styles.modalActions}>
+                <button type="submit" style={styles.saveButton}>
+                  {editingSemester ? 'Update' : 'Add'} Semester
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSemesterModal(false);
+                    setSelectedClass(null);
+                    setEditingSemester(null);
+                    setSemesterFormData({ semester_name: '', start_date: '', end_date: '', is_active: false });
+                  }}
+                  style={styles.cancelButton}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -863,6 +1091,97 @@ const styles = {
     color: '#7f8c8d',
     fontSize: '12px',
     fontStyle: 'italic',
+  },
+  semestersList: {
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #f0f0f0',
+  },
+  semestersTitle: {
+    fontSize: '16px',
+    marginBottom: '10px',
+    color: '#34495e',
+  },
+  semestersUl: {
+    listStyle: 'none',
+    padding: 0,
+    marginBottom: '10px',
+  },
+  semesterItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px 0',
+    borderBottom: '1px solid #f0f0f0',
+    gap: '10px',
+  },
+  semesterInfo: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  semesterDates: {
+    color: '#7f8c8d',
+    fontSize: '12px',
+  },
+  activeSemesterBadge: {
+    padding: '2px 8px',
+    backgroundColor: '#27ae60',
+    color: 'white',
+    borderRadius: '12px',
+    fontSize: '10px',
+    fontWeight: '600',
+  },
+  semesterActions: {
+    display: 'flex',
+    gap: '5px',
+  },
+  editSemesterButton: {
+    padding: '4px 8px',
+    backgroundColor: '#f39c12',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  removeSemesterButton: {
+    padding: '4px 8px',
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  addSemesterButton: {
+    padding: '8px 16px',
+    backgroundColor: '#16a085',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    width: '100%',
+    marginTop: '10px',
+  },
+  noSemesters: {
+    color: '#95a5a6',
+    fontStyle: 'italic',
+    marginBottom: '10px',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    cursor: 'pointer',
   },
   subjectInfo: {
     flex: 1,

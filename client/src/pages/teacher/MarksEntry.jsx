@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { classesAPI, marksAPI, subjectsAPI, resultsAPI } from '../../services/api';
+import { classesAPI, marksAPI, studentsAPI, resultsAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const MarksEntry = () => {
   const { user } = useAuth();
   const [classes, setClasses] = useState([]);
-  const [subjects, setSubjects] = useState([]);
+  const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
+    classId: '',
     studentId: '',
     subjectId: '',
     marks_obtained: '',
@@ -24,12 +25,12 @@ const MarksEntry = () => {
 
   const fetchData = async () => {
     try {
-      const [classesRes, subjectsRes] = await Promise.all([
+      const [classesRes, studentsRes] = await Promise.all([
         classesAPI.getAll({ teacher: user?._id }),
-        subjectsAPI.getAll(),
+        studentsAPI.getAll(),
       ]);
       setClasses(classesRes.data);
-      setSubjects(subjectsRes.data);
+      setStudents(studentsRes.data);
     } catch (err) {
       setError('Failed to load data');
     } finally {
@@ -52,8 +53,8 @@ const MarksEntry = () => {
     setMessage('');
 
     try {
-      if (!formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
-        setError('Student ID, Subject, and Marks are required');
+      if (!formData.classId || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
+        setError('Class, Student, Subject, and Marks are required');
         return;
       }
 
@@ -77,6 +78,21 @@ const MarksEntry = () => {
     }
   };
 
+  // Derived data based on selected class and teacher assignments
+  const selectedClass = classes.find((cls) => cls._id === formData.classId);
+
+  const teacherSubjects =
+    selectedClass && selectedClass.subjects
+      ? selectedClass.subjects.filter(
+          (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
+        )
+      : [];
+
+  const classStudents =
+    selectedClass && students.length > 0
+      ? students.filter((stu) => stu.class === selectedClass.class_name)
+      : [];
+
   if (loading) return <div style={styles.loading}>Loading...</div>;
 
   return (
@@ -88,17 +104,31 @@ const MarksEntry = () => {
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formRow}>
           <div style={styles.formGroup}>
-            <label>Student ID</label>
-            <input
-              type="text"
-              name="studentId"
-              value={formData.studentId}
-              onChange={handleChange}
-              placeholder="e.g., student document ID"
+            <label>Class</label>
+            <select
+              name="classId"
+              value={formData.classId}
+              onChange={(e) => {
+                // Reset dependent fields when class changes
+                handleChange(e);
+                setFormData((prev) => ({
+                  ...prev,
+                  studentId: '',
+                  subjectId: '',
+                }));
+              }}
               required
               style={styles.input}
-            />
+            >
+              <option value="">Select class</option>
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.class_name} (ID: {cls.class_id})
+                </option>
+              ))}
+            </select>
           </div>
+
           <div style={styles.formGroup}>
             <label>Subject</label>
             <select
@@ -106,12 +136,15 @@ const MarksEntry = () => {
               value={formData.subjectId}
               onChange={handleChange}
               required
+              disabled={!selectedClass}
               style={styles.input}
             >
-              <option value="">Select subject</option>
-              {subjects.map((s) => (
-                <option key={s._id} value={s._id}>
-                  {s.subject_name}
+              <option value="">
+                {selectedClass ? 'Select subject' : 'Select class first'}
+              </option>
+              {teacherSubjects.map((s, idx) => (
+                <option key={s.subject?._id || idx} value={s.subject?._id}>
+                  {s.subject?.subject_name || 'Unknown Subject'}
                 </option>
               ))}
             </select>
@@ -119,6 +152,27 @@ const MarksEntry = () => {
         </div>
 
         <div style={styles.formRow}>
+          <div style={styles.formGroup}>
+            <label>Student</label>
+            <select
+              name="studentId"
+              value={formData.studentId}
+              onChange={handleChange}
+              required
+              disabled={!selectedClass}
+              style={styles.input}
+            >
+              <option value="">
+                {selectedClass ? 'Select student' : 'Select class first'}
+              </option>
+              {classStudents.map((stu) => (
+                <option key={stu._id} value={stu._id}>
+                  {stu.name} - {stu.class} {stu.section} (ID: {stu.student_id})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div style={styles.formGroup}>
             <label>Marks Obtained</label>
             <input

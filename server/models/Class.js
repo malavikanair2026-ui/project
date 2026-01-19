@@ -36,6 +36,25 @@ const classSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    semesters: [
+      {
+        semester_name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        start_date: {
+          type: Date,
+        },
+        end_date: {
+          type: Date,
+        },
+        is_active: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
