@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { studentsAPI, usersAPI } from '../../services/api';
+import { studentsAPI, usersAPI, classesAPI } from '../../services/api';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
   const [users, setUsers] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [expandedClasses, setExpandedClasses] = useState(new Set());
+  const [hoveredClass, setHoveredClass] = useState(null);
   const [formData, setFormData] = useState({
     student_id: '',
     user: '',
@@ -23,12 +27,18 @@ const StudentManagement = () => {
 
   const fetchData = async () => {
     try {
-      const [studentsRes, usersRes] = await Promise.all([
+      const [studentsRes, usersRes, classesRes] = await Promise.all([
         studentsAPI.getAll(),
         usersAPI.getAll(),
+        classesAPI.getAll(),
       ]);
       setStudents(studentsRes.data);
       setUsers(usersRes.data.filter((u) => u.role === 'student'));
+      setClasses(classesRes.data);
+      
+      // Expand all classes by default
+      const allClassNames = [...new Set(studentsRes.data.map(s => s.class))];
+      setExpandedClasses(new Set(allClassNames));
     } catch (error) {
       console.error('Failed to fetch data:', error);
       setError('Failed to load data');
@@ -114,6 +124,42 @@ const StudentManagement = () => {
     setError('');
   };
 
+  const toggleClass = (className) => {
+    const newExpanded = new Set(expandedClasses);
+    if (newExpanded.has(className)) {
+      newExpanded.delete(className);
+    } else {
+      newExpanded.add(className);
+    }
+    setExpandedClasses(newExpanded);
+  };
+
+  // Group students by class
+  const groupedStudents = students.reduce((acc, student) => {
+    const className = student.class || 'Unassigned';
+    if (!acc[className]) {
+      acc[className] = [];
+    }
+    acc[className].push(student);
+    return acc;
+  }, {});
+
+  // Get all unique class names
+  const allClassNames = Object.keys(groupedStudents).sort();
+
+  // Filter classes based on selection
+  const displayClasses = selectedClass === 'all' 
+    ? allClassNames 
+    : allClassNames.filter(c => c === selectedClass);
+
+  // Get class options for dropdown (from both students and classes table)
+  const classOptions = [
+    ...new Set([
+      ...allClassNames,
+      ...classes.map(c => c.class_name)
+    ])
+  ].sort();
+
   if (loading) {
     return <div style={styles.loading}>Loading...</div>;
   }
@@ -129,56 +175,124 @@ const StudentManagement = () => {
 
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.tableContainer}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>Student ID</th>
-              <th>Name</th>
-              <th>Class</th>
-              <th>Section</th>
-              <th>Date of Birth</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.length === 0 ? (
-              <tr>
-                <td colSpan="6" style={styles.noData}>
-                  No students found
-                </td>
-              </tr>
-            ) : (
-              students.map((student) => (
-                <tr key={student._id}>
-                  <td>{student.student_id}</td>
-                  <td>{student.name}</td>
-                  <td>{student.class}</td>
-                  <td>{student.section}</td>
-                  <td>
-                    {student.dob
-                      ? new Date(student.dob).toLocaleDateString()
-                      : 'N/A'}
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => handleEdit(student)}
-                      style={styles.editButton}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(student._id)}
-                      style={styles.deleteButton}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Class Filter */}
+      <div style={styles.filterContainer}>
+        <label style={styles.filterLabel}>Filter by Class:</label>
+        <select
+          value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+          style={styles.filterSelect}
+        >
+          <option value="all">All Classes</option>
+          {allClassNames.map((className) => (
+            <option key={className} value={className}>
+              {className} ({groupedStudents[className]?.length || 0} students)
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => {
+            const allExpanded = new Set(allClassNames);
+            setExpandedClasses(allExpanded);
+          }}
+          style={styles.expandAllButton}
+        >
+          Expand All
+        </button>
+        <button
+          onClick={() => setExpandedClasses(new Set())}
+          style={styles.collapseAllButton}
+        >
+          Collapse All
+        </button>
+      </div>
+
+      {/* Class-wise Student Display */}
+      <div style={styles.classContainer}>
+        {displayClasses.length === 0 ? (
+          <div style={styles.noData}>No students found</div>
+        ) : (
+          displayClasses.map((className) => {
+            const classStudents = groupedStudents[className] || [];
+            const isExpanded = expandedClasses.has(className);
+            
+            return (
+              <div key={className} style={styles.classCard}>
+                <div
+                  style={{
+                    ...styles.classHeader,
+                    backgroundColor: hoveredClass === className ? '#e9ecef' : '#f8f9fa',
+                  }}
+                  onClick={() => toggleClass(className)}
+                  onMouseEnter={() => setHoveredClass(className)}
+                  onMouseLeave={() => setHoveredClass(null)}
+                >
+                  <div style={styles.classHeaderLeft}>
+                    <span style={styles.expandIcon}>
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                    <h3 style={styles.className}>{className}</h3>
+                    <span style={styles.studentCount}>
+                      ({classStudents.length} {classStudents.length === 1 ? 'student' : 'students'})
+                    </span>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div style={styles.studentsTableContainer}>
+                    <table style={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Student ID</th>
+                          <th>Name</th>
+                          <th>Section</th>
+                          <th>Date of Birth</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {classStudents.length === 0 ? (
+                          <tr>
+                            <td colSpan="5" style={styles.noData}>
+                              No students in this class
+                            </td>
+                          </tr>
+                        ) : (
+                          classStudents.map((student) => (
+                            <tr key={student._id}>
+                              <td>{student.student_id}</td>
+                              <td>{student.name}</td>
+                              <td>{student.section}</td>
+                              <td>
+                                {student.dob
+                                  ? new Date(student.dob).toLocaleDateString()
+                                  : 'N/A'}
+                              </td>
+                              <td>
+                                <button
+                                  onClick={() => handleEdit(student)}
+                                  style={styles.editButton}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(student._id)}
+                                  style={styles.deleteButton}
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {showModal && (
@@ -229,14 +343,20 @@ const StudentManagement = () => {
               </div>
               <div style={styles.formGroup}>
                 <label>Class</label>
-                <input
-                  type="text"
+                <select
                   name="class"
                   value={formData.class}
                   onChange={handleInputChange}
                   required
                   style={styles.input}
-                />
+                >
+                  <option value="">Select Class</option>
+                  {classOptions.map((className) => (
+                    <option key={className} value={className}>
+                      {className}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div style={styles.formGroup}>
                 <label>Section</label>
@@ -425,6 +545,87 @@ const styles = {
     textAlign: 'center',
     padding: '40px',
     fontSize: '18px',
+  },
+  filterContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+    marginBottom: '20px',
+    padding: '15px',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  filterLabel: {
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  filterSelect: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    minWidth: '200px',
+  },
+  expandAllButton: {
+    padding: '8px 16px',
+    backgroundColor: '#3498db',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  collapseAllButton: {
+    padding: '8px 16px',
+    backgroundColor: '#95a5a6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  classContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px',
+  },
+  classCard: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    overflow: 'hidden',
+  },
+  classHeader: {
+    padding: '15px 20px',
+    backgroundColor: '#f8f9fa',
+    borderBottom: '2px solid #dee2e6',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  classHeaderLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  expandIcon: {
+    fontSize: '12px',
+    color: '#666',
+    minWidth: '20px',
+  },
+  className: {
+    margin: 0,
+    fontSize: '18px',
+    color: '#2c3e50',
+    fontWeight: '600',
+  },
+  studentCount: {
+    fontSize: '14px',
+    color: '#7f8c8d',
+    fontWeight: 'normal',
+  },
+  studentsTableContainer: {
+    padding: '20px',
   },
 };
 
