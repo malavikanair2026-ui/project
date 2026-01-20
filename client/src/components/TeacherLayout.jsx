@@ -11,7 +11,14 @@ const TeacherLayout = ({ children }) => {
   const menuItems = [
     { path: '/teacher/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/teacher/classes', label: 'My Classes', icon: '🏫' },
+    { path: '/teacher/students', label: 'My Students', icon: '👥' },
     { path: '/teacher/marks', label: 'Enter Marks', icon: '✏️' },
+    { path: '/teacher/edit-marks', label: 'Edit Marks', icon: '📝' },
+    { path: '/teacher/performance', label: 'Student Performance', icon: '📈' },
+    { path: '/teacher/analytics', label: 'Class Analytics', icon: '📊' },
+    { path: '/teacher/feedback', label: 'Feedback', icon: '💬' },
+    { path: '/teacher/notifications', label: 'Notifications', icon: '🔔' },
+    { path: '/teacher/profile', label: 'Profile', icon: '👤' },
   ];
 
   const handleLogout = () => {

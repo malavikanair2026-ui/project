@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { classesAPI, marksAPI, studentsAPI, resultsAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ToastContainer';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const MarksEntry = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { showToast } = useToast();
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
@@ -15,13 +20,17 @@ const MarksEntry = () => {
     semester: '',
     is_final: true,
   });
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // Pre-select student from URL parameter
+    const studentIdParam = searchParams.get('studentId');
+    if (studentIdParam) {
+      setFormData((prev) => ({ ...prev, studentId: studentIdParam }));
+    }
+  }, [searchParams]);
 
   const fetchData = async () => {
     try {
@@ -31,8 +40,21 @@ const MarksEntry = () => {
       ]);
       setClasses(classesRes.data);
       setStudents(studentsRes.data);
+      
+      // If studentId is in URL, try to find and set the class
+      const studentIdParam = searchParams.get('studentId');
+      if (studentIdParam) {
+        const student = studentsRes.data.find((s) => s._id === studentIdParam);
+        if (student) {
+          const classObj = classesRes.data.find((c) => c.class_name === student.class);
+          if (classObj) {
+            setFormData((prev) => ({ ...prev, classId: classObj._id }));
+          }
+        }
+      }
     } catch (err) {
-      setError('Failed to load data');
+      console.error('Failed to load data:', err);
+      showToast('Failed to load data', 'error');
     } finally {
       setLoading(false);
     }
@@ -49,12 +71,11 @@ const MarksEntry = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setMessage('');
+    setSubmitting(true);
 
     try {
       if (!formData.classId || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
-        setError('Class, Student, Subject, and Marks are required');
+        showToast('Class, Student, Subject, and Marks are required', 'error');
         return;
       }
 
@@ -68,13 +89,22 @@ const MarksEntry = () => {
 
       // Auto-calculate result for the student (optional)
       if (formData.is_final) {
-        await resultsAPI.calculate(formData.studentId, formData.semester);
+        try {
+          await resultsAPI.calculate(formData.studentId, formData.semester);
+          showToast('Marks saved and result calculated successfully!', 'success');
+        } catch (calcError) {
+          console.error('Failed to calculate result:', calcError);
+          showToast('Marks saved but result calculation failed', 'warning');
+        }
+      } else {
+        showToast('Marks saved successfully!', 'success');
       }
 
-      setMessage('Marks saved successfully');
       setFormData({ ...formData, marks_obtained: '' });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save marks');
+      showToast(err.response?.data?.message || 'Failed to save marks', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -93,13 +123,11 @@ const MarksEntry = () => {
       ? students.filter((stu) => stu.class === selectedClass.class_name)
       : [];
 
-  if (loading) return <div style={styles.loading}>Loading...</div>;
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>
       <h2 style={styles.title}>Enter Marks</h2>
-      {error && <div style={styles.error}>{error}</div>}
-      {message && <div style={styles.success}>{message}</div>}
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formRow}>
@@ -226,7 +254,17 @@ const MarksEntry = () => {
           </div>
         </div>
 
-        <button type="submit" style={styles.button}>Save Marks</button>
+        <button
+          type="submit"
+          disabled={submitting}
+          style={{
+            ...styles.button,
+            opacity: submitting ? 0.6 : 1,
+            cursor: submitting ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {submitting ? 'Saving...' : 'Save Marks'}
+        </button>
       </form>
     </div>
   );
@@ -277,22 +315,6 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
     fontWeight: '600',
-  },
-  error: {
-    backgroundColor: '#fee',
-    color: '#c33',
-    padding: '12px',
-    borderRadius: '4px',
-  },
-  success: {
-    backgroundColor: '#e7f7ef',
-    color: '#1f8b4c',
-    padding: '12px',
-    borderRadius: '4px',
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '40px',
   },
 };
 

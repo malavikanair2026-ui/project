@@ -17,7 +17,14 @@ import GradingSchema from './pages/admin/GradingSchema';
 import TeacherLayout from './components/TeacherLayout';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
+import TeacherStudents from './pages/teacher/TeacherStudents';
 import MarksEntry from './pages/teacher/MarksEntry';
+import EditMarks from './pages/teacher/EditMarks';
+import TeacherPerformance from './pages/teacher/TeacherPerformance';
+import TeacherAnalytics from './pages/teacher/TeacherAnalytics';
+import TeacherFeedback from './pages/teacher/TeacherFeedback';
+import TeacherNotifications from './pages/teacher/TeacherNotifications';
+import TeacherProfile from './pages/teacher/TeacherProfile';
 import StudentLayout from './components/StudentLayout';
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentResults from './pages/student/StudentResults';
@@ -155,11 +162,81 @@ function App() {
           }
         />
         <Route
+          path="/teacher/students"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherStudents />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/teacher/marks"
           element={
             <ProtectedRoute allowedRoles={['teacher', 'admin']}>
               <TeacherLayout>
                 <MarksEntry />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/edit-marks"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <EditMarks />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/performance"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherPerformance />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/analytics"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherAnalytics />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/feedback"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherFeedback />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/notifications"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherNotifications />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/profile"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherProfile />
               </TeacherLayout>
             </ProtectedRoute>
           }
