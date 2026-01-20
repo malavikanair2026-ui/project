@@ -55,6 +55,24 @@ const TeacherStudents = () => {
       );
     }
 
+    // Sort by student_id in ascending order
+    filtered.sort((a, b) => {
+      // Handle both string and numeric student IDs
+      const idA = a.student_id?.toString() || '';
+      const idB = b.student_id?.toString() || '';
+      
+      // Try numeric comparison first
+      const numA = Number(idA);
+      const numB = Number(idB);
+      
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      
+      // Fallback to string comparison
+      return idA.localeCompare(idB);
+    });
+
     return filtered;
   };
 
