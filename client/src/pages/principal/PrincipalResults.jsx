@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { resultsAPI, studentsAPI } from '../../services/api';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PrincipalResults = () => {
+  const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,11 +56,15 @@ const PrincipalResults = () => {
     return '#e74c3c';
   };
 
+  const handleViewDetails = (studentId) => {
+    navigate(`/principal/student/${studentId}`);
+  };
+
   const uniqueClasses = [...new Set(students.map((s) => s.class))].filter(Boolean);
   const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
 
   if (loading) {
-    return <div style={styles.loading}>Loading...</div>;
+    return <LoadingSpinner />;
   }
 
   const filteredResults = getFilteredResults();
@@ -106,12 +113,13 @@ const PrincipalResults = () => {
               <th>Percentage</th>
               <th>Grade</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredResults.length === 0 ? (
               <tr>
-                <td colSpan="8" style={styles.noData}>
+                <td colSpan="9" style={styles.noData}>
                   No results found
                 </td>
               </tr>
@@ -120,9 +128,10 @@ const PrincipalResults = () => {
                 const student = students.find(
                   (s) => s._id === result.student?._id || s._id === result.student
                 );
+                const studentId = student?._id || result.student?._id || result.student;
                 return (
-                  <tr key={result._id}>
-                    <td>{student?.name || result.student?.name || 'Unknown'}</td>
+                  <tr key={result._id} style={styles.tableRow}>
+                    <td style={styles.nameCell}>{student?.name || result.student?.name || 'Unknown'}</td>
                     <td>{student?.class || 'N/A'}</td>
                     <td>{student?.section || 'N/A'}</td>
                     <td>{result.semester}</td>
@@ -152,6 +161,16 @@ const PrincipalResults = () => {
                       >
                         {result.status}
                       </span>
+                    </td>
+                    <td>
+                      {studentId && (
+                        <button
+                          onClick={() => handleViewDetails(studentId)}
+                          style={styles.viewButton}
+                        >
+                          View Details
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -209,6 +228,25 @@ const styles = {
   td: {
     padding: '15px',
     borderBottom: '1px solid #dee2e6',
+  },
+  tableRow: {
+    cursor: 'pointer',
+    transition: 'background 0.2s',
+  },
+  nameCell: {
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  viewButton: {
+    padding: '6px 12px',
+    backgroundColor: '#9b59b6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    transition: 'background 0.2s',
   },
   gradeBadge: {
     padding: '4px 12px',

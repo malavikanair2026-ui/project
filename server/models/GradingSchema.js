@@ -57,14 +57,13 @@ const gradingSchema = new mongoose.Schema(
 );
 
 // Ensure only one active schema exists
-gradingSchema.pre('save', async function (next) {
+gradingSchema.pre('save', async function () {
   if (this.is_active && (this.isNew || this.isModified('is_active'))) {
     await mongoose.model('GradingSchema').updateMany(
       { _id: { $ne: this._id }, is_active: true },
       { is_active: false }
     );
   }
-  next();
 });
 
 module.exports = mongoose.model('GradingSchema', gradingSchema);

@@ -63,11 +63,14 @@ const GradingSchema = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('Submitting grading schema:', formData);
       if (editingSchema) {
-        await gradingSchemaAPI.update(editingSchema._id, formData);
+        const response = await gradingSchemaAPI.update(editingSchema._id, formData);
+        console.log('Update response:', response);
         showToast('Grading schema updated successfully!', 'success');
       } else {
-        await gradingSchemaAPI.create(formData);
+        const response = await gradingSchemaAPI.create(formData);
+        console.log('Create response:', response);
         showToast('Grading schema created successfully!', 'success');
       }
       setShowModal(false);
@@ -75,7 +78,10 @@ const GradingSchema = () => {
       resetForm();
       fetchSchemas();
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to save grading schema', 'error');
+      console.error('Error saving grading schema:', error);
+      console.error('Error response:', error.response);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save grading schema';
+      showToast(errorMessage, 'error');
     }
   };
 

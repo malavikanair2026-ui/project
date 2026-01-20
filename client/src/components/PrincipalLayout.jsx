@@ -10,8 +10,10 @@ const PrincipalLayout = ({ children }) => {
 
   const menuItems = [
     { path: '/principal/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/principal/students', label: 'View Students', icon: '👥' },
     { path: '/principal/results', label: 'View Results', icon: '📋' },
     { path: '/principal/analytics', label: 'Analytics', icon: '📈' },
+    { path: '/principal/profile', label: 'Profile', icon: '👤' },
   ];
 
   const handleLogout = () => {

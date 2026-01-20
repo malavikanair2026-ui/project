@@ -25,8 +25,11 @@ import StudentPerformance from './pages/student/StudentPerformance';
 import StudentFeedback from './pages/student/StudentFeedback';
 import PrincipalLayout from './components/PrincipalLayout';
 import PrincipalDashboard from './pages/principal/PrincipalDashboard';
+import PrincipalStudents from './pages/principal/PrincipalStudents';
+import PrincipalStudentDetail from './pages/principal/PrincipalStudentDetail';
 import PrincipalResults from './pages/principal/PrincipalResults';
 import PrincipalAnalytics from './pages/principal/PrincipalAnalytics';
+import PrincipalProfile from './pages/principal/PrincipalProfile';
 import StaffLayout from './components/StaffLayout';
 import StaffDashboard from './pages/staff/StaffDashboard';
 import StaffMarksEntry from './pages/staff/StaffMarksEntry';
@@ -212,6 +215,26 @@ function App() {
           }
         />
         <Route
+          path="/principal/students"
+          element={
+            <ProtectedRoute allowedRoles={['principal', 'admin']}>
+              <PrincipalLayout>
+                <PrincipalStudents />
+              </PrincipalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/principal/student/:studentId"
+          element={
+            <ProtectedRoute allowedRoles={['principal', 'admin']}>
+              <PrincipalLayout>
+                <PrincipalStudentDetail />
+              </PrincipalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/principal/results"
           element={
             <ProtectedRoute allowedRoles={['principal', 'admin']}>
@@ -227,6 +250,16 @@ function App() {
             <ProtectedRoute allowedRoles={['principal', 'admin']}>
               <PrincipalLayout>
                 <PrincipalAnalytics />
+              </PrincipalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/principal/profile"
+          element={
+            <ProtectedRoute allowedRoles={['principal', 'admin']}>
+              <PrincipalLayout>
+                <PrincipalProfile />
               </PrincipalLayout>
             </ProtectedRoute>
           }

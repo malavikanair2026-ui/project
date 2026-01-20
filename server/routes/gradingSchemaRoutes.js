@@ -51,6 +51,11 @@ router.get('/:id', async (req, res) => {
 // Create new grading schema
 router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
+    console.log('Create grading schema request:', {
+      body: req.body,
+      user: req.user ? { id: req.user._id, role: req.user.role } : 'No user'
+    });
+    
     const { name, grade_ranges, pass_percentage, is_active } = req.body;
 
     // Validate required fields
@@ -78,10 +83,17 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
     }
 
     // Check for overlapping ranges
+    // Sort by min_percentage descending
     const sortedRanges = [...grade_ranges].sort((a, b) => b.min_percentage - a.min_percentage);
     for (let i = 0; i < sortedRanges.length - 1; i++) {
-      if (sortedRanges[i].min_percentage <= sortedRanges[i + 1].max_percentage) {
-        return res.status(400).json({ message: 'Grade ranges cannot overlap' });
+      const current = sortedRanges[i];
+      const next = sortedRanges[i + 1];
+      // Check if current range overlaps with next range
+      // Overlap occurs if: current.min <= next.max AND current.max >= next.min
+      if (current.min_percentage <= next.max_percentage && current.max_percentage >= next.min_percentage) {
+        return res.status(400).json({ 
+          message: `Grade ranges overlap: ${current.grade} (${current.min_percentage}-${current.max_percentage}%) overlaps with ${next.grade} (${next.min_percentage}-${next.max_percentage}%)` 
+        });
       }
     }
 
@@ -93,17 +105,31 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
       );
     }
 
+    // Check if schema with same name already exists
+    const existingSchema = await GradingSchema.findOne({ name: name.trim() });
+    if (existingSchema) {
+      return res.status(400).json({ message: 'A grading schema with this name already exists' });
+    }
+
     const schema = await GradingSchema.create({
       name: name.trim(),
       grade_ranges,
       pass_percentage: pass_percentage || 33,
       created_by: req.user?._id || null,
-      is_active: is_active || false,
+      is_active: is_active === true,
     });
 
+    console.log('Grading schema created successfully:', schema._id);
     res.status(201).json(schema);
   } catch (error) {
     console.error('Create grading schema error:', error);
+    console.error('Error details:', {
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      errors: error.errors
+    });
+    
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ message: messages.join(', ') });
