@@ -213,7 +213,14 @@ const StudentManagement = () => {
           <div style={styles.noData}>No students found</div>
         ) : (
           displayClasses.map((className) => {
-            const classStudents = groupedStudents[className] || [];
+            const classStudents = (groupedStudents[className] || []).sort((a, b) => {
+              // Sort by student_id first (ascending)
+              if (a.student_id !== b.student_id) {
+                return (a.student_id || 0) - (b.student_id || 0);
+              }
+              // If student_id is the same, sort by name (ascending)
+              return (a.name || '').localeCompare(b.name || '');
+            });
             const isExpanded = expandedClasses.has(className);
             
             return (
