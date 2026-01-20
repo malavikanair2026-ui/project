@@ -6,7 +6,7 @@ const gradingSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide a schema name'],
       trim: true,
-      default: 'Default Grading Schema',
+      unique: true,
     },
     is_active: {
       type: Boolean,
@@ -58,9 +58,9 @@ const gradingSchema = new mongoose.Schema(
 
 // Ensure only one active schema exists
 gradingSchema.pre('save', async function (next) {
-  if (this.is_active && this.isNew) {
+  if (this.is_active && (this.isNew || this.isModified('is_active'))) {
     await mongoose.model('GradingSchema').updateMany(
-      { is_active: true },
+      { _id: { $ne: this._id }, is_active: true },
       { is_active: false }
     );
   }
