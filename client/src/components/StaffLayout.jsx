@@ -10,8 +10,10 @@ const StaffLayout = ({ children }) => {
 
   const menuItems = [
     { path: '/staff/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/staff/students', label: 'View Students', icon: '👥' },
     { path: '/staff/marks', label: 'Enter Marks', icon: '✏️' },
     { path: '/staff/results', label: 'View Results', icon: '📋' },
+    { path: '/staff/profile', label: 'Profile', icon: '👤' },
   ];
 
   const handleLogout = () => {

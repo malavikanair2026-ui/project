@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { resultsAPI, studentsAPI } from '../../services/api';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const StaffResults = () => {
+  const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
+  const [filterSemester, setFilterSemester] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -28,14 +33,45 @@ const StaffResults = () => {
   };
 
   const getFilteredResults = () => {
-    if (!filterClass) return results;
+    let filtered = results;
 
-    return results.filter((r) => {
-      const student = students.find(
-        (s) => s._id === r.student?._id || s._id === r.student
-      );
-      return student?.class === filterClass;
-    });
+    if (filterClass) {
+      filtered = filtered.filter((r) => {
+        const student = students.find(
+          (s) => s._id === r.student?._id || s._id === r.student
+        );
+        return student?.class === filterClass;
+      });
+    }
+
+    if (filterSemester) {
+      filtered = filtered.filter((r) => r.semester === filterSemester);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter((r) => {
+        const student = students.find(
+          (s) => s._id === r.student?._id || s._id === r.student
+        );
+        return (
+          student?.name?.toLowerCase().includes(term) ||
+          student?.student_id?.toLowerCase().includes(term) ||
+          r.semester?.toLowerCase().includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  };
+
+  const handleViewDetails = (studentId) => {
+    // Navigate to a detail view or show modal
+    // For now, we'll just show an alert or could navigate to student detail page
+    if (studentId) {
+      // Could navigate to a detail page if we create one
+      console.log('View details for student:', studentId);
+    }
   };
 
   const getGradeColor = (grade) => {
@@ -47,9 +83,10 @@ const StaffResults = () => {
   };
 
   const uniqueClasses = [...new Set(students.map((s) => s.class))].filter(Boolean);
+  const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
 
   if (loading) {
-    return <div style={styles.loading}>Loading...</div>;
+    return <LoadingSpinner />;
   }
 
   const filteredResults = getFilteredResults();
@@ -58,18 +95,39 @@ const StaffResults = () => {
     <div>
       <div style={styles.header}>
         <h2 style={styles.title}>View Results</h2>
-        <select
-          value={filterClass}
-          onChange={(e) => setFilterClass(e.target.value)}
-          style={styles.select}
-        >
-          <option value="">All Classes</option>
-          {uniqueClasses.map((cls) => (
-            <option key={cls} value={cls}>
-              {cls}
-            </option>
-          ))}
-        </select>
+        <div style={styles.filters}>
+          <input
+            type="text"
+            placeholder="Search by name, ID, or semester..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+          <select
+            value={filterClass}
+            onChange={(e) => setFilterClass(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Classes</option>
+            {uniqueClasses.map((cls) => (
+              <option key={cls} value={cls}>
+                {cls}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterSemester}
+            onChange={(e) => setFilterSemester(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Semesters</option>
+            {uniqueSemesters.map((sem) => (
+              <option key={sem} value={sem}>
+                {sem}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div style={styles.tableContainer}>
@@ -99,8 +157,8 @@ const StaffResults = () => {
                   (s) => s._id === result.student?._id || s._id === result.student
                 );
                 return (
-                  <tr key={result._id}>
-                    <td>{student?.name || result.student?.name || 'Unknown'}</td>
+                  <tr key={result._id} style={styles.tableRow}>
+                    <td style={styles.nameCell}>{student?.name || result.student?.name || 'Unknown'}</td>
                     <td>{student?.class || 'N/A'}</td>
                     <td>{student?.section || 'N/A'}</td>
                     <td>{result.semester}</td>
@@ -184,6 +242,10 @@ const styles = {
     padding: '15px',
     borderBottom: '1px solid #dee2e6',
   },
+  nameCell: {
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
   gradeBadge: {
     padding: '4px 12px',
     borderRadius: '12px',
@@ -208,6 +270,10 @@ const styles = {
     textAlign: 'center',
     padding: '40px',
     fontSize: '18px',
+  },
+  tableRow: {
+    cursor: 'pointer',
+    transition: 'background 0.2s',
   },
 };
 

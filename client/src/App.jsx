@@ -32,8 +32,10 @@ import PrincipalAnalytics from './pages/principal/PrincipalAnalytics';
 import PrincipalProfile from './pages/principal/PrincipalProfile';
 import StaffLayout from './components/StaffLayout';
 import StaffDashboard from './pages/staff/StaffDashboard';
+import StaffStudents from './pages/staff/StaffStudents';
 import StaffMarksEntry from './pages/staff/StaffMarksEntry';
 import StaffResults from './pages/staff/StaffResults';
+import StaffProfile from './pages/staff/StaffProfile';
 
 function App() {
   return (
@@ -276,6 +278,16 @@ function App() {
           }
         />
         <Route
+          path="/staff/students"
+          element={
+            <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <StaffLayout>
+                <StaffStudents />
+              </StaffLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/staff/marks"
           element={
             <ProtectedRoute allowedRoles={['staff', 'admin']}>
@@ -291,6 +303,16 @@ function App() {
             <ProtectedRoute allowedRoles={['staff', 'admin']}>
               <StaffLayout>
                 <StaffResults />
+              </StaffLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/profile"
+          element={
+            <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <StaffLayout>
+                <StaffProfile />
               </StaffLayout>
             </ProtectedRoute>
           }

@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { studentsAPI, resultsAPI } from '../../services/api';
+import { studentsAPI, resultsAPI, marksAPI } from '../../services/api';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const StaffDashboard = () => {
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalResults: 0,
-    pendingMarks: 0,
+    pendingResults: 0,
+    approvedResults: 0,
+    totalMarksEntries: 0,
+    averagePercentage: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -23,11 +27,17 @@ const StaffDashboard = () => {
       const students = studentsRes.data;
       const results = resultsRes.data;
       const pendingResults = results.filter((r) => r.status === 'pending').length;
+      const approvedResults = results.filter((r) => r.status === 'approved').length;
+      const totalPercentage = results.reduce((sum, r) => sum + (r.percentage || 0), 0);
+      const averagePercentage = results.length > 0 ? totalPercentage / results.length : 0;
 
       setStats({
         totalStudents: students.length,
         totalResults: results.length,
-        pendingMarks: pendingResults,
+        pendingResults,
+        approvedResults,
+        totalMarksEntries: results.length, // Approximate, could be enhanced
+        averagePercentage,
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -37,7 +47,7 @@ const StaffDashboard = () => {
   };
 
   if (loading) {
-    return <div style={styles.loading}>Loading...</div>;
+    return <LoadingSpinner />;
   }
 
   return (
@@ -62,19 +72,57 @@ const StaffDashboard = () => {
         </div>
 
         <div style={styles.statCard}>
+          <div style={styles.statIcon}>✅</div>
+          <div style={styles.statInfo}>
+            <div style={styles.statValue}>{stats.approvedResults}</div>
+            <div style={styles.statLabel}>Approved Results</div>
+          </div>
+        </div>
+
+        <div style={styles.statCard}>
           <div style={styles.statIcon}>⏳</div>
           <div style={styles.statInfo}>
-            <div style={styles.statValue}>{stats.pendingMarks}</div>
+            <div style={styles.statValue}>{stats.pendingResults}</div>
             <div style={styles.statLabel}>Pending Results</div>
+          </div>
+        </div>
+
+        <div style={styles.statCard}>
+          <div style={styles.statIcon}>📊</div>
+          <div style={styles.statInfo}>
+            <div style={styles.statValue}>{stats.averagePercentage.toFixed(1)}%</div>
+            <div style={styles.statLabel}>Average Percentage</div>
+          </div>
+        </div>
+
+        <div style={styles.statCard}>
+          <div style={styles.statIcon}>📝</div>
+          <div style={styles.statInfo}>
+            <div style={styles.statValue}>{stats.totalMarksEntries}</div>
+            <div style={styles.statLabel}>Marks Entries</div>
           </div>
         </div>
       </div>
 
       <div style={styles.quickActions}>
         <h3 style={styles.sectionTitle}>Quick Actions</h3>
-        <p style={styles.info}>
-          Use the navigation menu to enter marks for students and view final results.
-        </p>
+        <div style={styles.actionGrid}>
+          <div style={styles.actionCard}>
+            <div style={styles.actionIcon}>👥</div>
+            <div style={styles.actionTitle}>View Students</div>
+            <div style={styles.actionDesc}>Browse all students to enter marks</div>
+          </div>
+          <div style={styles.actionCard}>
+            <div style={styles.actionIcon}>✏️</div>
+            <div style={styles.actionTitle}>Enter Marks</div>
+            <div style={styles.actionDesc}>Add marks for students</div>
+          </div>
+          <div style={styles.actionCard}>
+            <div style={styles.actionIcon}>📋</div>
+            <div style={styles.actionTitle}>View Results</div>
+            <div style={styles.actionDesc}>Check final results of students</div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -125,12 +173,35 @@ const styles = {
   },
   sectionTitle: {
     fontSize: '20px',
-    marginBottom: '15px',
+    marginBottom: '20px',
     color: '#2c3e50',
   },
-  info: {
-    color: '#666',
-    lineHeight: '1.6',
+  actionGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '20px',
+  },
+  actionCard: {
+    padding: '20px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+    textAlign: 'center',
+    transition: 'transform 0.2s',
+    cursor: 'pointer',
+  },
+  actionIcon: {
+    fontSize: '40px',
+    marginBottom: '10px',
+  },
+  actionTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: '5px',
+  },
+  actionDesc: {
+    fontSize: '14px',
+    color: '#7f8c8d',
   },
   loading: {
     textAlign: 'center',

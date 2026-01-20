@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { studentsAPI, subjectsAPI, marksAPI, resultsAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ToastContainer';
@@ -6,6 +7,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 
 const StaffMarksEntry = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [students, setStudents] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [formData, setFormData] = useState({
@@ -22,7 +24,12 @@ const StaffMarksEntry = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // Pre-select student from URL parameter
+    const studentIdParam = searchParams.get('studentId');
+    if (studentIdParam) {
+      setFormData((prev) => ({ ...prev, studentId: studentIdParam }));
+    }
+  }, [searchParams]);
 
   const fetchData = async () => {
     try {
