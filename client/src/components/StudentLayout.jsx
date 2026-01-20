@@ -12,7 +12,10 @@ const StudentLayout = ({ children }) => {
     { path: '/student/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/student/results', label: 'My Results', icon: '📋' },
     { path: '/student/performance', label: 'Performance', icon: '📈' },
-    { path: '/student/feedback', label: 'Feedback', icon: '💬' },
+    { path: '/student/notifications', label: 'Notifications', icon: '🔔' },
+    { path: '/student/queries', label: 'Send Query', icon: '💬' },
+    { path: '/student/feedback', label: 'Feedback', icon: '📝' },
+    { path: '/student/profile', label: 'Profile', icon: '👤' },
   ];
 
   const handleLogout = () => {

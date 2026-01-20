@@ -55,12 +55,54 @@ const StudentPerformance = () => {
           total: 0,
           max: 0,
           count: 0,
+          marks: [],
         };
       }
       subjectPerformance[subjectName].total += mark.marks_obtained;
       subjectPerformance[subjectName].max += mark.subject?.max_marks || 0;
       subjectPerformance[subjectName].count += 1;
+      subjectPerformance[subjectName].marks.push(mark.marks_obtained);
     });
+
+    // Calculate strengths and weaknesses
+    const strengths = [];
+    const weaknesses = [];
+    const improvements = [];
+
+    Object.entries(subjectPerformance).forEach(([subjectName, data]) => {
+      const percentage = (data.total / data.max) * 100;
+      const avgMarks = data.total / data.count;
+      const maxMarks = data.max / data.count;
+      const subjectPercentage = (avgMarks / maxMarks) * 100;
+
+      if (subjectPercentage >= 80) {
+        strengths.push({
+          subject: subjectName,
+          percentage: subjectPercentage,
+          average: avgMarks,
+          max: maxMarks,
+        });
+      } else if (subjectPercentage < 50) {
+        weaknesses.push({
+          subject: subjectName,
+          percentage: subjectPercentage,
+          average: avgMarks,
+          max: maxMarks,
+        });
+      } else {
+        improvements.push({
+          subject: subjectName,
+          percentage: subjectPercentage,
+          average: avgMarks,
+          max: maxMarks,
+        });
+      }
+    });
+
+    // Sort by percentage
+    strengths.sort((a, b) => b.percentage - a.percentage);
+    weaknesses.sort((a, b) => a.percentage - b.percentage);
+    improvements.sort((a, b) => a.percentage - b.percentage);
 
     return {
       average,
@@ -68,6 +110,9 @@ const StudentPerformance = () => {
       lowest,
       trend,
       subjectPerformance,
+      strengths,
+      weaknesses,
+      improvements,
     };
   };
 
@@ -177,6 +222,78 @@ const StudentPerformance = () => {
           </div>
         </div>
       )}
+
+      {/* Strengths and Weaknesses */}
+      <div style={styles.analysisSection}>
+        <div style={styles.analysisGrid}>
+          {/* Strengths */}
+          <div style={styles.analysisCard}>
+            <h3 style={styles.analysisTitle}>
+              <span style={styles.strengthIcon}>💪</span> Strengths
+            </h3>
+            {metrics.strengths.length > 0 ? (
+              <div style={styles.analysisList}>
+                {metrics.strengths.map((item, index) => (
+                  <div key={index} style={styles.analysisItem}>
+                    <div style={styles.analysisItemHeader}>
+                      <span style={styles.analysisSubject}>{item.subject}</span>
+                      <span style={styles.analysisPercentage}>
+                        {item.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={styles.analysisBarContainer}>
+                      <div
+                        style={{
+                          ...styles.analysisBar,
+                          width: `${Math.min(item.percentage, 100)}%`,
+                          backgroundColor: '#27ae60',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={styles.noAnalysisData}>No strong subjects identified yet</p>
+            )}
+          </div>
+
+          {/* Weaknesses */}
+          <div style={styles.analysisCard}>
+            <h3 style={styles.analysisTitle}>
+              <span style={styles.weaknessIcon}>⚠️</span> Areas for Improvement
+            </h3>
+            {metrics.weaknesses.length > 0 ? (
+              <div style={styles.analysisList}>
+                {metrics.weaknesses.map((item, index) => (
+                  <div key={index} style={styles.analysisItem}>
+                    <div style={styles.analysisItemHeader}>
+                      <span style={styles.analysisSubject}>{item.subject}</span>
+                      <span style={styles.analysisPercentage}>
+                        {item.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={styles.analysisBarContainer}>
+                      <div
+                        style={{
+                          ...styles.analysisBar,
+                          width: `${Math.min(item.percentage, 100)}%`,
+                          backgroundColor: '#e74c3c',
+                        }}
+                      />
+                    </div>
+                    <div style={styles.suggestion}>
+                      💡 Focus on improving {item.subject}. Consider extra practice or seeking help.
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={styles.noAnalysisData}>Great job! No major weaknesses identified</p>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Subject-wise Performance */}
       {Object.keys(metrics.subjectPerformance).length > 0 && (
@@ -346,6 +463,86 @@ const styles = {
   subjectBar: {
     height: '100%',
     transition: 'width 0.3s',
+  },
+  analysisSection: {
+    marginBottom: '30px',
+  },
+  analysisGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '20px',
+    marginBottom: '30px',
+  },
+  analysisCard: {
+    backgroundColor: 'white',
+    padding: '25px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  analysisTitle: {
+    fontSize: '20px',
+    marginTop: 0,
+    marginBottom: '20px',
+    color: '#2c3e50',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  strengthIcon: {
+    fontSize: '24px',
+  },
+  weaknessIcon: {
+    fontSize: '24px',
+  },
+  analysisList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px',
+  },
+  analysisItem: {
+    padding: '15px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '6px',
+    border: '1px solid #dee2e6',
+  },
+  analysisItemHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  analysisSubject: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  analysisPercentage: {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#2c3e50',
+  },
+  analysisBarContainer: {
+    height: '20px',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    marginBottom: '8px',
+  },
+  analysisBar: {
+    height: '100%',
+    transition: 'width 0.3s',
+  },
+  suggestion: {
+    fontSize: '13px',
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+    marginTop: '8px',
+  },
+  noAnalysisData: {
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: '20px',
   },
   noDataCard: {
     backgroundColor: 'white',

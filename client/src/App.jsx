@@ -29,7 +29,10 @@ import StudentLayout from './components/StudentLayout';
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentResults from './pages/student/StudentResults';
 import StudentPerformance from './pages/student/StudentPerformance';
+import StudentNotifications from './pages/student/StudentNotifications';
+import StudentQueries from './pages/student/StudentQueries';
 import StudentFeedback from './pages/student/StudentFeedback';
+import StudentProfile from './pages/student/StudentProfile';
 import PrincipalLayout from './components/PrincipalLayout';
 import PrincipalDashboard from './pages/principal/PrincipalDashboard';
 import PrincipalStudents from './pages/principal/PrincipalStudents';
@@ -273,11 +276,41 @@ function App() {
           }
         />
         <Route
+          path="/student/notifications"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'admin']}>
+              <StudentLayout>
+                <StudentNotifications />
+              </StudentLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/queries"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'admin']}>
+              <StudentLayout>
+                <StudentQueries />
+              </StudentLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/student/feedback"
           element={
             <ProtectedRoute allowedRoles={['student', 'admin']}>
               <StudentLayout>
                 <StudentFeedback />
+              </StudentLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/profile"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'admin']}>
+              <StudentLayout>
+                <StudentProfile />
               </StudentLayout>
             </ProtectedRoute>
           }
