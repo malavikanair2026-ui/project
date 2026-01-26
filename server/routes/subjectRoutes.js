@@ -7,27 +7,28 @@ const router = express.Router();
 // Create subject
 router.post('/', async (req, res) => {
   try {
-    // Validate that the class exists if provided
-    if (req.body.class) {
-      const classExists = await Class.findById(req.body.class);
-      if (!classExists) {
-        return res.status(400).json({ message: 'Class not found' });
-      }
+    // Validate that class is provided
+    if (!req.body.class) {
+      return res.status(400).json({ message: 'Class is required' });
+    }
+    
+    // Validate that the class exists
+    const classExists = await Class.findById(req.body.class);
+    if (!classExists) {
+      return res.status(400).json({ message: 'Class not found' });
     }
 
     const subject = await Subject.create(req.body);
     
-    // If class is provided, add subject to class's subjects array
-    if (req.body.class) {
-      const classDoc = await Class.findById(req.body.class);
-      // Check if subject is already in class
-      const subjectExists = classDoc.subjects.some(
-        (s) => String(s.subject) === String(subject._id)
-      );
-      if (!subjectExists) {
-        classDoc.subjects.push({ subject: subject._id, teacher: req.body.teacher || null });
-        await classDoc.save();
-      }
+    // Add subject to class's subjects array
+    const classDoc = await Class.findById(req.body.class);
+    // Check if subject is already in class
+    const subjectExists = classDoc.subjects.some(
+      (s) => String(s.subject) === String(subject._id)
+    );
+    if (!subjectExists) {
+      classDoc.subjects.push({ subject: subject._id, teacher: req.body.teacher || null });
+      await classDoc.save();
     }
 
     const populatedSubject = await Subject.findById(subject._id)
@@ -82,12 +83,15 @@ router.get('/:id', async (req, res) => {
 // Update subject
 router.put('/:id', async (req, res) => {
   try {
-    // Validate that the class exists if being updated
-    if (req.body.class) {
-      const classExists = await Class.findById(req.body.class);
-      if (!classExists) {
-        return res.status(400).json({ message: 'Class not found' });
-      }
+    // Validate that class is provided
+    if (!req.body.class) {
+      return res.status(400).json({ message: 'Class is required' });
+    }
+    
+    // Validate that the class exists
+    const classExists = await Class.findById(req.body.class);
+    if (!classExists) {
+      return res.status(400).json({ message: 'Class not found' });
     }
 
     const subject = await Subject.findByIdAndUpdate(req.params.id, req.body, {

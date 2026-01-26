@@ -80,7 +80,7 @@ const SubjectManagement = () => {
 
     try {
       await subjectsAPI.delete(id);
-      fetchSubjects();
+      fetchData();
     } catch (error) {
       setError('Failed to delete subject');
     }
@@ -221,14 +221,15 @@ const SubjectManagement = () => {
                 />
               </div>
               <div style={styles.formGroup}>
-                <label>Class (Optional)</label>
+                <label>Class *</label>
                 <select
                   name="class"
                   value={formData.class}
                   onChange={handleInputChange}
+                  required
                   style={styles.input}
                 >
-                  <option value="">Select Class (Optional)</option>
+                  <option value="">Select Class</option>
                   {classes.map((classObj) => (
                     <option key={classObj._id} value={classObj._id}>
                       {classObj.class_name}
