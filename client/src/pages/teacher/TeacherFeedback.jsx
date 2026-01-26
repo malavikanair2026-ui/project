@@ -108,7 +108,8 @@ const TeacherFeedback = () => {
 
   const classStudents = teacherClasses.length > 0
     ? students.filter((s) => {
-        return teacherClasses.some((cls) => s.class === cls.class_name);
+        const studentClassId = s.class?._id || s.class;
+        return teacherClasses.some((cls) => String(cls._id) === String(studentClassId));
       })
     : [];
 
@@ -143,7 +144,7 @@ const TeacherFeedback = () => {
                 <option value="">Select Student</option>
                 {classStudents.map((student) => (
                   <option key={student._id} value={student._id}>
-                    {student.name} - {student.class} {student.section} (ID: {student.student_id})
+                    {student.name} - {student.class?.class_name || student.class || 'N/A'} {student.section} (ID: {student.student_id})
                   </option>
                 ))}
               </select>

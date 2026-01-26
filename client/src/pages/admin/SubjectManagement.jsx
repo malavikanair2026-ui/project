@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { subjectsAPI } from '../../services/api';
+import { subjectsAPI, classesAPI } from '../../services/api';
 
 const SubjectManagement = () => {
   const [subjects, setSubjects] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState('all');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
@@ -10,20 +12,25 @@ const SubjectManagement = () => {
     subject_id: '',
     subject_name: '',
     max_marks: 100,
+    class: '',
   });
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchSubjects();
+    fetchData();
   }, []);
 
-  const fetchSubjects = async () => {
+  const fetchData = async () => {
     try {
-      const response = await subjectsAPI.getAll();
-      setSubjects(response.data);
+      const [subjectsRes, classesRes] = await Promise.all([
+        subjectsAPI.getAll(),
+        classesAPI.getAll(),
+      ]);
+      setSubjects(subjectsRes.data);
+      setClasses(classesRes.data);
     } catch (error) {
-      console.error('Failed to fetch subjects:', error);
-      setError('Failed to load subjects');
+      console.error('Failed to fetch data:', error);
+      setError('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -50,8 +57,8 @@ const SubjectManagement = () => {
       }
       setShowModal(false);
       setEditingSubject(null);
-      setFormData({ subject_id: '', subject_name: '', max_marks: 100 });
-      fetchSubjects();
+      setFormData({ subject_id: '', subject_name: '', max_marks: 100, class: '' });
+      fetchData();
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to save subject');
     }
@@ -63,6 +70,7 @@ const SubjectManagement = () => {
       subject_id: subject.subject_id,
       subject_name: subject.subject_name,
       max_marks: subject.max_marks,
+      class: subject.class?._id || subject.class || '',
     });
     setShowModal(true);
   };
@@ -81,9 +89,17 @@ const SubjectManagement = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingSubject(null);
-    setFormData({ subject_id: '', subject_name: '', max_marks: 100 });
+    setFormData({ subject_id: '', subject_name: '', max_marks: 100, class: '' });
     setError('');
   };
+
+  // Filter subjects by class
+  const filteredSubjects = selectedClass === 'all' 
+    ? subjects 
+    : subjects.filter(s => {
+        const subjectClassId = s.class?._id || s.class;
+        return String(subjectClassId) === String(selectedClass);
+      });
 
   if (loading) {
     return <div style={styles.loading}>Loading...</div>;
@@ -100,6 +116,23 @@ const SubjectManagement = () => {
 
       {error && <div style={styles.error}>{error}</div>}
 
+      {/* Class Filter */}
+      <div style={styles.filterContainer}>
+        <label style={styles.filterLabel}>Filter by Class:</label>
+        <select
+          value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+          style={styles.filterSelect}
+        >
+          <option value="all">All Classes</option>
+          {classes.map((classObj) => (
+            <option key={classObj._id} value={classObj._id}>
+              {classObj.class_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div style={styles.tableContainer}>
         <table style={styles.table}>
           <thead>
@@ -107,22 +140,24 @@ const SubjectManagement = () => {
               <th>Subject ID</th>
               <th>Subject Name</th>
               <th>Max Marks</th>
+              <th>Class</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {subjects.length === 0 ? (
+            {filteredSubjects.length === 0 ? (
               <tr>
-                <td colSpan="4" style={styles.noData}>
+                <td colSpan="5" style={styles.noData}>
                   No subjects found
                 </td>
               </tr>
             ) : (
-              subjects.map((subject) => (
+              filteredSubjects.map((subject) => (
                 <tr key={subject._id}>
                   <td>{subject.subject_id}</td>
                   <td>{subject.subject_name}</td>
                   <td>{subject.max_marks}</td>
+                  <td>{subject.class?.class_name || 'Not assigned'}</td>
                   <td>
                     <button
                       onClick={() => handleEdit(subject)}
@@ -184,6 +219,22 @@ const SubjectManagement = () => {
                   min="1"
                   style={styles.input}
                 />
+              </div>
+              <div style={styles.formGroup}>
+                <label>Class (Optional)</label>
+                <select
+                  name="class"
+                  value={formData.class}
+                  onChange={handleInputChange}
+                  style={styles.input}
+                >
+                  <option value="">Select Class (Optional)</option>
+                  {classes.map((classObj) => (
+                    <option key={classObj._id} value={classObj._id}>
+                      {classObj.class_name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div style={styles.modalActions}>
                 <button type="submit" style={styles.saveButton}>
@@ -348,6 +399,27 @@ const styles = {
     textAlign: 'center',
     padding: '40px',
     fontSize: '18px',
+  },
+  filterContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+    marginBottom: '20px',
+    padding: '15px',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  filterLabel: {
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  filterSelect: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    minWidth: '200px',
   },
 };
 

@@ -13,6 +13,7 @@ const TeacherStudents = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -42,8 +43,15 @@ const TeacherStudents = () => {
     if (selectedClass) {
       const classObj = classes.find((c) => c._id === selectedClass);
       if (classObj) {
-        filtered = filtered.filter((s) => s.class === classObj.class_name);
+        filtered = filtered.filter((s) => {
+          const studentClassId = s.class?._id || s.class;
+          return String(studentClassId) === String(classObj._id);
+        });
       }
+    }
+
+    if (selectedSection) {
+      filtered = filtered.filter((s) => s.section === selectedSection);
     }
 
     if (searchTerm) {
@@ -95,6 +103,16 @@ const TeacherStudents = () => {
     );
   });
 
+  // Get unique sections from filtered students (by class if selected)
+  const studentsForSectionFilter = selectedClass
+    ? students.filter((s) => {
+        const studentClassId = s.class?._id || s.class;
+        const classObj = classes.find((c) => c._id === selectedClass);
+        return classObj && String(studentClassId) === String(classObj._id);
+      })
+    : students;
+  const uniqueSections = [...new Set(studentsForSectionFilter.map(s => s.section).filter(Boolean))].sort();
+
   return (
     <div>
       <div style={styles.header}>
@@ -109,13 +127,28 @@ const TeacherStudents = () => {
           />
           <select
             value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
+            onChange={(e) => {
+              setSelectedClass(e.target.value);
+              setSelectedSection(''); // Reset section when class changes
+            }}
             style={styles.select}
           >
             <option value="">All Classes</option>
             {teacherClasses.map((cls) => (
               <option key={cls._id} value={cls._id}>
                 {cls.class_name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedSection}
+            onChange={(e) => setSelectedSection(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Sections</option>
+            {uniqueSections.map((section) => (
+              <option key={section} value={section}>
+                {section}
               </option>
             ))}
           </select>
@@ -156,7 +189,7 @@ const TeacherStudents = () => {
                 <tr key={student._id}>
                   <td>{student.student_id}</td>
                   <td style={styles.nameCell}>{student.name}</td>
-                  <td>{student.class || 'N/A'}</td>
+                  <td>{student.class?.class_name || student.class || 'N/A'}</td>
                   <td>{student.section || 'N/A'}</td>
                   <td>
                     <div style={styles.actionButtons}>

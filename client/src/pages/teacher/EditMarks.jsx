@@ -101,7 +101,8 @@ const EditMarks = () => {
       if (classObj) {
         filtered = filtered.filter((m) => {
           const student = students.find((s) => s._id === (m.student?._id || m.student));
-          return student?.class === classObj.class_name;
+          const studentClassId = student?.class?._id || student?.class;
+          return String(studentClassId) === String(classObj._id);
         });
       }
     }
@@ -147,14 +148,14 @@ const EditMarks = () => {
           {students
             .filter((s) => {
               if (filterClass) {
-                const classObj = classes.find((c) => c._id === filterClass);
-                return s.class === classObj?.class_name;
+                const studentClassId = s.class?._id || s.class;
+                return String(studentClassId) === String(filterClass);
               }
               return true;
             })
             .map((student) => (
               <option key={student._id} value={student._id}>
-                {student.name} - {student.class} {student.section} (ID: {student.student_id})
+                {student.name} - {student.class?.class_name || student.class || 'N/A'} {student.section} (ID: {student.student_id})
               </option>
             ))}
         </select>

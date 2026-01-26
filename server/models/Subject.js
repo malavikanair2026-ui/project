@@ -18,6 +18,10 @@ const subjectSchema = new mongoose.Schema(
       required: [true, 'Please provide maximum marks'],
       default: 100,
     },
+    class: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Class',
+    },
   },
   {
     timestamps: true,

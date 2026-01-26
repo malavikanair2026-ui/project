@@ -161,7 +161,7 @@ const StudentDashboard = () => {
                 <strong>Student ID:</strong> {student.student_id}
               </div>
               <div style={styles.infoItem}>
-                <strong>Class:</strong> {student.class}
+                <strong>Class:</strong> {student.class?.class_name || student.class || 'N/A'}
               </div>
               <div style={styles.infoItem}>
                 <strong>Section:</strong> {student.section}

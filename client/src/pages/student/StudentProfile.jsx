@@ -153,7 +153,7 @@ const StudentProfile = () => {
                 </div>
                 <div style={styles.infoItem}>
                   <div style={styles.infoLabel}>Class</div>
-                  <div style={styles.infoValue}>{student.class || 'N/A'}</div>
+                  <div style={styles.infoValue}>{student.class?.class_name || student.class || 'N/A'}</div>
                 </div>
                 <div style={styles.infoItem}>
                   <div style={styles.infoLabel}>Section</div>

@@ -40,7 +40,8 @@ const StaffResults = () => {
         const student = students.find(
           (s) => s._id === r.student?._id || s._id === r.student
         );
-        return student?.class === filterClass;
+        const studentClassName = student?.class?.class_name || student?.class;
+        return studentClassName === filterClass;
       });
     }
 
@@ -82,7 +83,7 @@ const StaffResults = () => {
     return '#e74c3c';
   };
 
-  const uniqueClasses = [...new Set(students.map((s) => s.class))].filter(Boolean);
+  const uniqueClasses = [...new Set(students.map((s) => s.class?.class_name || s.class).filter(Boolean))];
   const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
 
   if (loading) {

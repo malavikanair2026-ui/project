@@ -46,7 +46,10 @@ const MarksEntry = () => {
       if (studentIdParam) {
         const student = studentsRes.data.find((s) => s._id === studentIdParam);
         if (student) {
-          const classObj = classesRes.data.find((c) => c.class_name === student.class);
+          const studentClassId = student.class?._id || student.class;
+          const classObj = classesRes.data.find((c) => 
+            c._id === studentClassId || c.class_name === student.class
+          );
           if (classObj) {
             setFormData((prev) => ({ ...prev, classId: classObj._id }));
           }
@@ -120,7 +123,10 @@ const MarksEntry = () => {
 
   const classStudents =
     selectedClass && students.length > 0
-      ? students.filter((stu) => stu.class === selectedClass.class_name)
+      ? students.filter((stu) => {
+          const studentClassId = stu.class?._id || stu.class;
+          return String(studentClassId) === String(selectedClass._id);
+        })
       : [];
 
   if (loading) return <LoadingSpinner />;

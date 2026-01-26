@@ -9,6 +9,7 @@ const StudentManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedSection, setSelectedSection] = useState('all');
   const [expandedClasses, setExpandedClasses] = useState(new Set());
   const [hoveredClass, setHoveredClass] = useState(null);
   const [formData, setFormData] = useState({
@@ -37,7 +38,11 @@ const StudentManagement = () => {
       setClasses(classesRes.data);
       
       // Expand all classes by default
-      const allClassNames = [...new Set(studentsRes.data.map(s => s.class))];
+      const allClassNames = [...new Set(
+        studentsRes.data
+          .map(s => s.class?.class_name || s.class?._id || 'Unassigned')
+          .filter(Boolean)
+      )];
       setExpandedClasses(new Set(allClassNames));
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -90,9 +95,9 @@ const StudentManagement = () => {
     setEditingStudent(student);
     setFormData({
       student_id: student.student_id,
-      user: student.user._id || student.user,
+      user: student.user?._id || student.user || '',
       name: student.name,
-      class: student.class,
+      class: student.class?._id || student.class || '',
       section: student.section,
       dob: student.dob ? new Date(student.dob).toISOString().split('T')[0] : '',
     });
@@ -134,9 +139,14 @@ const StudentManagement = () => {
     setExpandedClasses(newExpanded);
   };
 
+  // Filter students by section if selected
+  const filteredStudents = selectedSection === 'all' 
+    ? students 
+    : students.filter(s => s.section === selectedSection);
+
   // Group students by class
-  const groupedStudents = students.reduce((acc, student) => {
-    const className = student.class || 'Unassigned';
+  const groupedStudents = filteredStudents.reduce((acc, student) => {
+    const className = student.class?.class_name || student.class?._id || 'Unassigned';
     if (!acc[className]) {
       acc[className] = [];
     }
@@ -152,13 +162,14 @@ const StudentManagement = () => {
     ? allClassNames 
     : allClassNames.filter(c => c === selectedClass);
 
-  // Get class options for dropdown (from both students and classes table)
-  const classOptions = [
-    ...new Set([
-      ...allClassNames,
-      ...classes.map(c => c.class_name)
-    ])
-  ].sort();
+  // Get class options for dropdown (from classes table)
+  const classOptions = classes.map(c => ({
+    _id: c._id,
+    class_name: c.class_name
+  }));
+
+  // Get unique sections from students
+  const uniqueSections = [...new Set(students.map(s => s.section).filter(Boolean))].sort();
 
   if (loading) {
     return <div style={styles.loading}>Loading...</div>;
@@ -175,7 +186,7 @@ const StudentManagement = () => {
 
       {error && <div style={styles.error}>{error}</div>}
 
-      {/* Class Filter */}
+      {/* Filters */}
       <div style={styles.filterContainer}>
         <label style={styles.filterLabel}>Filter by Class:</label>
         <select
@@ -184,9 +195,27 @@ const StudentManagement = () => {
           style={styles.filterSelect}
         >
           <option value="all">All Classes</option>
-          {allClassNames.map((className) => (
-            <option key={className} value={className}>
-              {className} ({groupedStudents[className]?.length || 0} students)
+          {allClassNames.map((className) => {
+            const displayName = className === 'Unassigned' 
+              ? 'Unassigned' 
+              : (classes.find(c => c._id === className || c.class_name === className)?.class_name || className);
+            return (
+              <option key={className} value={className}>
+                {displayName} ({groupedStudents[className]?.length || 0} students)
+              </option>
+            );
+          })}
+        </select>
+        <label style={styles.filterLabel}>Filter by Section:</label>
+        <select
+          value={selectedSection}
+          onChange={(e) => setSelectedSection(e.target.value)}
+          style={styles.filterSelect}
+        >
+          <option value="all">All Sections</option>
+          {uniqueSections.map((section) => (
+            <option key={section} value={section}>
+              {section}
             </option>
           ))}
         </select>
@@ -223,6 +252,11 @@ const StudentManagement = () => {
             });
             const isExpanded = expandedClasses.has(className);
             
+            // Get class name for display
+            const displayClassName = className === 'Unassigned' 
+              ? 'Unassigned' 
+              : (classes.find(c => c._id === className || c.class_name === className)?.class_name || className);
+            
             return (
               <div key={className} style={styles.classCard}>
                 <div
@@ -238,7 +272,7 @@ const StudentManagement = () => {
                     <span style={styles.expandIcon}>
                       {isExpanded ? '▼' : '▶'}
                     </span>
-                    <h3 style={styles.className}>{className}</h3>
+                    <h3 style={styles.className}>{displayClassName}</h3>
                     <span style={styles.studentCount}>
                       ({classStudents.length} {classStudents.length === 1 ? 'student' : 'students'})
                     </span>
@@ -358,9 +392,9 @@ const StudentManagement = () => {
                   style={styles.input}
                 >
                   <option value="">Select Class</option>
-                  {classOptions.map((className) => (
-                    <option key={className} value={className}>
-                      {className}
+                  {classOptions.map((classObj) => (
+                    <option key={classObj._id} value={classObj._id}>
+                      {classObj.class_name}
                     </option>
                   ))}
                 </select>

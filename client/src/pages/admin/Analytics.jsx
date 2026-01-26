@@ -391,7 +391,7 @@ const Analytics = () => {
                       </td>
                       <td style={styles.td}>{student.studentId}</td>
                       <td style={styles.td}>{student.name}</td>
-                      <td style={styles.td}>{student.class}</td>
+                      <td style={styles.td}>{student.class?.class_name || student.class || 'N/A'}</td>
                       <td style={styles.td}>{student.section}</td>
                       <td style={styles.td}>{student.semester}</td>
                       <td style={styles.td}>{student.totalMarks}</td>

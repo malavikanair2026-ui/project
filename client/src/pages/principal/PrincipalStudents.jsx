@@ -9,6 +9,7 @@ const PrincipalStudents = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
+  const [filterSection, setFilterSection] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClasses, setExpandedClasses] = useState({});
   const navigate = useNavigate();
@@ -40,7 +41,15 @@ const PrincipalStudents = () => {
 
     // Filter by class
     if (filterClass) {
-      filtered = filtered.filter((s) => s.class === filterClass);
+      filtered = filtered.filter((s) => {
+        const studentClassName = s.class?.class_name || s.class;
+        return studentClassName === filterClass;
+      });
+    }
+
+    // Filter by section
+    if (filterSection) {
+      filtered = filtered.filter((s) => s.section === filterSection);
     }
 
     // Filter by search term
@@ -66,7 +75,7 @@ const PrincipalStudents = () => {
   const groupStudentsByClass = (studentList) => {
     const grouped = {};
     studentList.forEach((student) => {
-      const className = student.class || 'Unassigned';
+      const className = student.class?.class_name || student.class || 'Unassigned';
       if (!grouped[className]) {
         grouped[className] = [];
       }
@@ -111,7 +120,16 @@ const PrincipalStudents = () => {
 
   const filteredStudents = getFilteredStudents();
   const groupedStudents = groupStudentsByClass(filteredStudents);
-  const uniqueClasses = [...new Set(students.map((s) => s.class))].filter(Boolean).sort();
+  const uniqueClasses = [...new Set(students.map((s) => s.class?.class_name || s.class).filter(Boolean))].sort();
+  
+  // Get unique sections from filtered students (by class if selected)
+  const studentsForSectionFilter = filterClass
+    ? students.filter((s) => {
+        const studentClassName = s.class?.class_name || s.class;
+        return studentClassName === filterClass;
+      })
+    : students;
+  const uniqueSections = [...new Set(studentsForSectionFilter.map(s => s.section).filter(Boolean))].sort();
 
   return (
     <div>
@@ -127,13 +145,28 @@ const PrincipalStudents = () => {
           />
           <select
             value={filterClass}
-            onChange={(e) => setFilterClass(e.target.value)}
+            onChange={(e) => {
+              setFilterClass(e.target.value);
+              setFilterSection(''); // Reset section when class changes
+            }}
             style={styles.select}
           >
             <option value="">All Classes</option>
             {uniqueClasses.map((cls) => (
               <option key={cls} value={cls}>
                 {cls}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterSection}
+            onChange={(e) => setFilterSection(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Sections</option>
+            {uniqueSections.map((section) => (
+              <option key={section} value={section}>
+                {section}
               </option>
             ))}
           </select>

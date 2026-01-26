@@ -51,7 +51,8 @@ const TeacherAnalytics = () => {
         if (classObj) {
           filteredResults = filteredResults.filter((r) => {
             const student = students.find((s) => s._id === (r.student?._id || r.student));
-            return student?.class === classObj.class_name;
+            const studentClassId = student?.class?._id || student?.class;
+            return String(studentClassId) === String(classObj._id);
           });
         }
       }
@@ -88,7 +89,10 @@ const TeacherAnalytics = () => {
 
   const classObj = classes.find((c) => c._id === selectedClass);
   const classStudents = classObj
-    ? students.filter((s) => s.class === classObj.class_name)
+    ? students.filter((s) => {
+        const studentClassId = s.class?._id || s.class;
+        return String(studentClassId) === String(classObj._id);
+      })
     : [];
 
   const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);

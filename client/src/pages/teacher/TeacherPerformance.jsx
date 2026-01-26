@@ -86,8 +86,8 @@ const TeacherPerformance = () => {
 
   const classStudents = selectedClass
     ? students.filter((s) => {
-        const classObj = classes.find((c) => c._id === selectedClass);
-        return s.class === classObj?.class_name;
+        const studentClassId = s.class?._id || s.class;
+        return String(studentClassId) === String(selectedClass);
       })
     : [];
 
@@ -153,7 +153,7 @@ const TeacherPerformance = () => {
             <div style={styles.studentInfo}>
               <span>ID: {student.student_id}</span>
               <span>•</span>
-              <span>Class: {student.class || 'N/A'}</span>
+              <span>Class: {student.class?.class_name || student.class || 'N/A'}</span>
               <span>•</span>
               <span>Section: {student.section || 'N/A'}</span>
             </div>

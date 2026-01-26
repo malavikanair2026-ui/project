@@ -18,9 +18,9 @@ const studentSchema = new mongoose.Schema(
       trim: true,
     },
     class: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Class',
       required: [true, 'Please provide class'],
-      trim: true,
     },
     section: {
       type: String,
