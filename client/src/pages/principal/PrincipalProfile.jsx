@@ -42,16 +42,13 @@ const PrincipalProfile = () => {
     setLoading(true);
 
     try {
-      const response = await authAPI.getProfile();
+      const response = await authAPI.updateProfile({ name: formData.name });
       const updatedUser = response.data;
-      
-      // Update user info (if backend supports it)
-      // For now, we'll just update the local state
       setUser(updatedUser);
       showToast('Profile updated successfully', 'success');
     } catch (error) {
       console.error('Failed to update profile:', error);
-      showToast('Failed to update profile', 'error');
+      showToast(error.response?.data?.message || 'Failed to update profile', 'error');
     } finally {
       setLoading(false);
     }
@@ -59,6 +56,11 @@ const PrincipalProfile = () => {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
+
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      showToast('All password fields are required', 'error');
+      return;
+    }
 
     if (formData.newPassword !== formData.confirmPassword) {
       showToast('New passwords do not match', 'error');
@@ -73,11 +75,8 @@ const PrincipalProfile = () => {
     setLoading(true);
 
     try {
-      // This would require a backend endpoint for password change
-      // For now, we'll show a message
-      showToast('Password change feature requires backend implementation', 'info');
-      
-      // Reset password fields
+      await authAPI.changePassword(formData.currentPassword, formData.newPassword);
+      showToast('Password changed successfully', 'success');
       setFormData((prev) => ({
         ...prev,
         currentPassword: '',
@@ -86,7 +85,7 @@ const PrincipalProfile = () => {
       }));
     } catch (error) {
       console.error('Failed to change password:', error);
-      showToast('Failed to change password', 'error');
+      showToast(error.response?.data?.message || 'Failed to change password', 'error');
     } finally {
       setLoading(false);
     }

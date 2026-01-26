@@ -2,10 +2,6 @@ const mongoose = require('mongoose');
 
 const resultSchema = new mongoose.Schema(
   {
-    result_id: {
-      type: Number,
-      unique: true,
-    },
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Student',
