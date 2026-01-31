@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { studentsAPI, feedbackAPI } from '../../services/api';
+import { studentsAPI, queriesAPI, classesAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -9,7 +9,7 @@ const StudentQueries = () => {
   const { showToast } = useToast();
   const [student, setStudent] = useState(null);
   const [teachers, setTeachers] = useState([]);
-  const [feedbacks, setFeedbacks] = useState([]);
+  const [queries, setQueries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,12 +26,36 @@ const StudentQueries = () => {
   const fetchData = async () => {
     try {
       const studentRes = await studentsAPI.getByUserId(user._id);
-      setStudent(studentRes.data);
+      const studentData = studentRes.data;
+      setStudent(studentData);
 
-      // Fetch feedbacks sent by this student (if any)
-      // Note: This might need a different API endpoint
-      // For now, we'll just show the form
-      setFeedbacks([]);
+      // Fetch queries submitted by this student
+      const queriesRes = await queriesAPI.getByStudent(studentData._id);
+      setQueries(Array.isArray(queriesRes.data) ? queriesRes.data : []);
+
+      // Fetch teachers from student's class for dropdown
+      if (studentData.class?._id || studentData.class) {
+        const classId = studentData.class?._id || studentData.class;
+        const classRes = await classesAPI.getById(classId);
+        const classData = classRes.data;
+        const teacherSet = new Map();
+        // Add class teacher
+        if (classData.class_teacher) {
+          const t = classData.class_teacher;
+          teacherSet.set(t._id, { _id: t._id, name: t.name });
+        }
+        // Add assigned teachers
+        (classData.assigned_teachers || []).forEach((t) => {
+          teacherSet.set(t._id, { _id: t._id, name: t.name });
+        });
+        // Add subject teachers
+        (classData.subjects || []).forEach((s) => {
+          if (s.teacher) teacherSet.set(s.teacher._id, { _id: s.teacher._id, name: s.teacher.name });
+        });
+        setTeachers(Array.from(teacherSet.values()));
+      } else {
+        setTeachers([]);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load data', 'error');
@@ -51,34 +75,24 @@ const StudentQueries = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.teacher || !formData.query.trim()) {
-      showToast('Please select a teacher and enter your query', 'error');
+    if (!formData.query.trim()) {
+      showToast('Please enter your query', 'error');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Since the backend feedback API expects teacher to send feedback to student,
-      // we might need a different approach. For now, we'll show a message.
-      // This could be implemented as a separate "Query" model or use notifications
-      showToast('Query submission feature - backend implementation needed', 'info');
-      
-      // Alternative: Could use notifications API to send message to teacher
-      // await notificationsAPI.create({
-      //   recipients: [formData.teacher],
-      //   sender: user._id,
-      //   title: `Query from ${student?.name || 'Student'}`,
-      //   message: formData.query,
-      //   notification_type: 'general',
-      // });
-
-      setFormData({
-        teacher: '',
-        query: '',
-        subject: '',
+      await queriesAPI.create({
+        teacher: formData.teacher || undefined,
+        subject: formData.subject?.trim() || undefined,
+        query: formData.query.trim(),
       });
+
+      showToast('Query submitted successfully! Your teacher will respond soon.', 'success');
+      setFormData({ teacher: '', query: '', subject: '' });
       setShowForm(false);
+      fetchData(); // Refresh queries list
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to send query', 'error');
     } finally {
@@ -129,17 +143,24 @@ const StudentQueries = () => {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Select Teacher (Optional)</label>
-              <input
-                type="text"
+              <select
                 name="teacher"
                 value={formData.teacher}
                 onChange={handleInputChange}
                 style={styles.input}
-                placeholder="Enter teacher name or leave blank for general query"
-              />
-              <small style={styles.helpText}>
-                Note: Teacher selection will be available once backend supports student-to-teacher queries
-              </small>
+              >
+                <option value="">General Query (any teacher)</option>
+                {teachers.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              {teachers.length === 0 && (
+                <small style={styles.helpText}>
+                  No teachers assigned to your class yet. Your query will be sent as a general query.
+                </small>
+              )}
             </div>
 
             <div style={styles.formGroup}>
@@ -209,40 +230,45 @@ const StudentQueries = () => {
         </div>
       </div>
 
-      {/* Previous Queries (if any) */}
-      {feedbacks.length > 0 && (
-        <div style={styles.queriesSection}>
-          <h3 style={styles.sectionTitle}>Previous Queries</h3>
+      {/* Previous Queries */}
+      <div style={styles.queriesSection}>
+        <h3 style={styles.sectionTitle}>Previous Queries</h3>
+        {queries.length === 0 ? (
+          <p style={styles.emptyText}>No queries yet. Submit your first query using the form above.</p>
+        ) : (
           <div style={styles.queriesList}>
-            {feedbacks.map((feedback) => (
-              <div key={feedback._id} style={styles.queryCard}>
+            {queries.map((q) => (
+              <div key={q._id} style={styles.queryCard}>
                 <div style={styles.queryHeader}>
                   <div>
                     <strong style={styles.querySubject}>
-                      {feedback.subject || 'General Query'}
+                      {q.subject || 'General Query'}
                     </strong>
                     <div style={styles.queryDate}>
-                      {new Date(feedback.createdAt).toLocaleDateString()}
+                      {new Date(q.createdAt).toLocaleDateString()}
+                      {q.teacher?.name && (
+                        <span> • To: {q.teacher.name}</span>
+                      )}
                     </div>
                   </div>
-                  <div style={styles.queryStatus}>
-                    {feedback.status || 'Pending'}
+                  <div style={{ ...styles.queryStatus, backgroundColor: q.status === 'answered' ? '#27ae60' : '#f39c12' }}>
+                    {q.status === 'answered' ? 'Answered' : 'Pending'}
                   </div>
                 </div>
                 <div style={styles.queryBody}>
-                  <p>{feedback.query || feedback.feedback}</p>
+                  <p>{q.query}</p>
                 </div>
-                {feedback.response && (
+                {q.response && (
                   <div style={styles.queryResponse}>
                     <strong>Response:</strong>
-                    <p>{feedback.response}</p>
+                    <p>{q.response}</p>
                   </div>
                 )}
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
@@ -373,6 +399,11 @@ const styles = {
     padding: '25px',
     borderRadius: '8px',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  emptyText: {
+    color: '#7f8c8d',
+    fontSize: '14px',
+    margin: 0,
   },
   sectionTitle: {
     fontSize: '20px',

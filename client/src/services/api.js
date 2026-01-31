@@ -42,9 +42,6 @@ export const authAPI = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   register: (userData) => api.post('/auth/register', userData),
   getProfile: () => api.get('/auth/profile'),
-  updateProfile: (data) => api.put('/auth/profile', data),
-  changePassword: (currentPassword, newPassword) => 
-    api.put('/auth/change-password', { currentPassword, newPassword }),
   logout: () => api.post('/auth/logout'),
 };
 
@@ -118,6 +115,12 @@ export const classesAPI = {
 export const feedbackAPI = {
   getByStudent: (studentId) => api.get(`/feedback/student/${studentId}`),
   create: (data) => api.post('/feedback', data),
+};
+
+// Queries API (student-to-teacher queries)
+export const queriesAPI = {
+  create: (data) => api.post('/queries', data),
+  getByStudent: (studentId) => api.get(`/queries/student/${studentId}`),
 };
 
 // Notifications API

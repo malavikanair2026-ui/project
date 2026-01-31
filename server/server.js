@@ -43,6 +43,7 @@ app.use('/api/marks', require('./routes/marksRoutes'));
 app.use('/api/results', require('./routes/resultRoutes'));
 app.use('/api/classes', require('./routes/classRoutes'));
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/queries', require('./routes/queryRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/grading-schemas', require('./routes/gradingSchemaRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
