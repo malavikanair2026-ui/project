@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { studentsAPI, queriesAPI, classesAPI } from '../../services/api';
+import { studentsAPI, queriesAPI, classesAPI, usersAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -20,10 +20,11 @@ const StudentQueries = () => {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, [user]);
+    if (user?._id) fetchData();
+  }, [user?._id]);
 
   const fetchData = async () => {
+    if (!user?._id) return;
     try {
       const studentRes = await studentsAPI.getByUserId(user._id);
       const studentData = studentRes.data;
@@ -33,29 +34,50 @@ const StudentQueries = () => {
       const queriesRes = await queriesAPI.getByStudent(studentData._id);
       setQueries(Array.isArray(queriesRes.data) ? queriesRes.data : []);
 
-      // Fetch teachers from student's class for dropdown
-      if (studentData.class?._id || studentData.class) {
-        const classId = studentData.class?._id || studentData.class;
-        const classRes = await classesAPI.getById(classId);
-        const classData = classRes.data;
-        const teacherSet = new Map();
-        // Add class teacher
-        if (classData.class_teacher) {
-          const t = classData.class_teacher;
-          teacherSet.set(t._id, { _id: t._id, name: t.name });
+      // Fetch teachers from student's class for dropdown; fallback to all teachers if none from class
+      const teacherSet = new Map();
+      const classId = studentData.class?._id || studentData.class;
+      if (classId) {
+        try {
+          const classRes = await classesAPI.getById(classId);
+          const classData = classRes.data;
+          // Add class teacher (handle populated or ObjectId)
+          const ct = classData.class_teacher;
+          if (ct) {
+            const id = ct._id || ct;
+            if (id) teacherSet.set(String(id), { _id: id, name: ct.name || 'Teacher' });
+          }
+          // Add assigned teachers
+          (classData.assigned_teachers || []).forEach((t) => {
+            const id = t?._id || t;
+            if (id) teacherSet.set(String(id), { _id: id, name: t?.name || 'Teacher' });
+          });
+          // Add subject teachers
+          (classData.subjects || []).forEach((s) => {
+            const t = s?.teacher;
+            if (t) {
+              const id = t._id || t;
+              if (id) teacherSet.set(String(id), { _id: id, name: t.name || 'Teacher' });
+            }
+          });
+        } catch (err) {
+          console.error('Failed to fetch class for teachers:', err);
         }
-        // Add assigned teachers
-        (classData.assigned_teachers || []).forEach((t) => {
-          teacherSet.set(t._id, { _id: t._id, name: t.name });
-        });
-        // Add subject teachers
-        (classData.subjects || []).forEach((s) => {
-          if (s.teacher) teacherSet.set(s.teacher._id, { _id: s.teacher._id, name: s.teacher.name });
-        });
-        setTeachers(Array.from(teacherSet.values()));
-      } else {
-        setTeachers([]);
       }
+      let teacherList = Array.from(teacherSet.values());
+      // Fallback: if no teachers from class, fetch all teachers so dropdown still lists names
+      if (teacherList.length === 0) {
+        try {
+          const usersRes = await usersAPI.getAll();
+          const allUsers = usersRes.data || [];
+          teacherList = allUsers
+            .filter((u) => u.role === 'teacher')
+            .map((u) => ({ _id: u._id, name: u.name || u.email || 'Teacher' }));
+        } catch (err) {
+          console.error('Failed to fetch teachers fallback:', err);
+        }
+      }
+      setTeachers(teacherList);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load data', 'error');
