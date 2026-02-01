@@ -58,7 +58,9 @@ const PrincipalAnalytics = () => {
         studentsAPI.getAll(),
       ]);
 
-      const results = resultsRes.data.filter((r) => !selectedSemester || r.semester === selectedSemester);
+      const results = resultsRes.data
+        .filter((r) => !selectedSemester || r.semester === selectedSemester)
+        .filter((r) => r.student?.name);
       const students = studentsRes.data;
 
       const passCount = results.filter((r) => r.grade !== 'F').length;

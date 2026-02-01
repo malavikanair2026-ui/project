@@ -61,6 +61,8 @@ const TeacherAnalytics = () => {
         filteredResults = filteredResults.filter((r) => r.semester === selectedSemester);
       }
 
+      filteredResults = filteredResults.filter((r) => r.student?.name);
+
       setResults(filteredResults);
     } catch (error) {
       console.error('Failed to fetch class data:', error);

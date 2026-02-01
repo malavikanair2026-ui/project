@@ -42,7 +42,9 @@ const Analytics = () => {
         studentsAPI.getAll(),
       ]);
 
-      const results = resultsRes.data.filter((r) => !semesterFilter || r.semester === semesterFilter);
+      const results = resultsRes.data
+        .filter((r) => !semesterFilter || r.semester === semesterFilter)
+        .filter((r) => r.student?.name);
       const students = studentsRes.data;
 
       const passCount = results.filter((r) => r.grade !== 'F').length;
