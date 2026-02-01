@@ -428,10 +428,13 @@ const PrincipalAnalytics = () => {
                     </div>
                   </div>
 
-                  {data.topScorers && data.topScorers.length > 0 && (
+                  {data.topScorers?.filter((s) => s.studentName && s.studentName !== '-').length > 0 && (
                     <div style={styles.topScorers}>
                       <div style={styles.topScorersTitle}>Top Scorers</div>
-                      {data.topScorers.slice(0, 5).map((scorer, idx) => (
+                      {data.topScorers
+                        .filter((s) => s.studentName && s.studentName !== '-')
+                        .slice(0, 5)
+                        .map((scorer, idx) => (
                         <div key={idx} style={styles.scorerItem}>
                           <span>{scorer.studentName}</span>
                           <span>{scorer.marks} ({scorer.percentage.toFixed(1)}%)</span>

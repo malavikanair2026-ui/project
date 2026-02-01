@@ -145,8 +145,10 @@ router.get('/subject-analysis', async (req, res) => {
       data.passRate = data.count > 0 ? (data.passCount / data.count) * 100 : 0;
 
       // Sort and get top 10 scorers
-      data.topScorers.sort((a, b) => b.marks - a.marks);
-      data.topScorers = data.topScorers.slice(0, 10);
+      data.topScorers = data.topScorers
+        .filter((s) => s.studentName && s.studentName !== '-')
+        .sort((a, b) => b.marks - a.marks)
+        .slice(0, 10);
     });
 
     res.json(subjectAnalysis);

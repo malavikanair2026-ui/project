@@ -344,11 +344,14 @@ const Analytics = () => {
                       <strong>{subject.count}</strong>
                     </div>
                   </div>
-                  {subject.topScorers.length > 0 && (
+                  {subject.topScorers.filter((s) => s.studentName && s.studentName !== '-').length > 0 && (
                     <div style={styles.topScorersSection}>
                       <strong>Top Scorers:</strong>
                       <ol style={styles.topScorersList}>
-                        {subject.topScorers.slice(0, 5).map((scorer, idx) => (
+                        {subject.topScorers
+                          .filter((s) => s.studentName && s.studentName !== '-')
+                          .slice(0, 5)
+                          .map((scorer, idx) => (
                           <li key={idx} style={styles.topScorerItem}>
                             {scorer.studentName} - {scorer.marks}/{subject.maxMarks} ({scorer.percentage.toFixed(1)}%)
                           </li>
