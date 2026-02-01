@@ -121,6 +121,8 @@ export const feedbackAPI = {
 export const queriesAPI = {
   create: (data) => api.post('/queries', data),
   getByStudent: (studentId) => api.get(`/queries/student/${studentId}`),
+  getByTeacher: (teacherId) => api.get(`/queries/teacher/${teacherId}`),
+  respond: (queryId, response) => api.put(`/queries/${queryId}/respond`, { response }),
 };
 
 // Notifications API

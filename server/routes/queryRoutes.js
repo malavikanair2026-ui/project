@@ -44,9 +44,36 @@ router.post('/', protect, authorize('student'), async (req, res) => {
 });
 
 /**
+ * GET /api/queries/teacher/:teacherId
+ * Get all queries received by a teacher (addressed to them or general)
+ * Must be before /:id/respond so "teacher" is not captured as id.
+ */
+router.get('/teacher/:teacherId', protect, authorize('teacher', 'admin'), async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    if (req.user.role === 'teacher' && String(req.user._id) !== String(teacherId)) {
+      return res.status(403).json({ message: 'Not authorized to view this teacher\'s queries' });
+    }
+
+    const queries = await Query.find({
+      $or: [
+        { teacher: teacherId },
+        { teacher: null },
+      ],
+    })
+      .populate('student', 'name student_id')
+      .populate('teacher', 'name email')
+      .sort({ createdAt: -1 });
+    res.json(queries);
+  } catch (error) {
+    console.error('Get teacher queries error:', error);
+    res.status(500).json({ message: 'Failed to fetch queries' });
+  }
+});
+
+/**
  * GET /api/queries/student/:studentId
  * Get all queries submitted by a student
- * Authorization: student can only fetch their own; teachers/admin/principal/staff can fetch any
  */
 router.get('/student/:studentId', protect, async (req, res) => {
   try {
@@ -56,7 +83,6 @@ router.get('/student/:studentId', protect, async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Students can only fetch their own queries
     if (req.user.role === 'student') {
       if (String(student.user) !== String(req.user._id)) {
         return res.status(403).json({ message: 'Not authorized to view this student\'s queries' });
@@ -70,6 +96,47 @@ router.get('/student/:studentId', protect, async (req, res) => {
   } catch (error) {
     console.error('Get queries error:', error);
     res.status(500).json({ message: 'Failed to fetch queries' });
+  }
+});
+
+/**
+ * PUT /api/queries/:id/respond
+ * Teacher responds to a query (sets response and status to answered)
+ * Body: { response: string }
+ */
+router.put('/:id/respond', protect, authorize('teacher', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { response } = req.body;
+    if (!response || typeof response !== 'string' || !response.trim()) {
+      return res.status(400).json({ message: 'Response content is required' });
+    }
+
+    const queryDoc = await Query.findById(id);
+    if (!queryDoc) {
+      return res.status(404).json({ message: 'Query not found' });
+    }
+
+    // Teacher can only respond to queries addressed to them or general (teacher null)
+    if (req.user.role === 'teacher') {
+      const isAddressedToMe = queryDoc.teacher && String(queryDoc.teacher) === String(req.user._id);
+      const isGeneral = !queryDoc.teacher;
+      if (!isAddressedToMe && !isGeneral) {
+        return res.status(403).json({ message: 'Not authorized to respond to this query' });
+      }
+    }
+
+    queryDoc.response = response.trim();
+    queryDoc.status = 'answered';
+    await queryDoc.save();
+
+    const populated = await Query.findById(queryDoc._id)
+      .populate('student', 'name student_id')
+      .populate('teacher', 'name email');
+    res.json(populated);
+  } catch (error) {
+    console.error('Respond to query error:', error);
+    res.status(500).json({ message: 'Failed to respond to query' });
   }
 });
 

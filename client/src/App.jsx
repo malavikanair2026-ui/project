@@ -23,6 +23,7 @@ import EditMarks from './pages/teacher/EditMarks';
 import TeacherPerformance from './pages/teacher/TeacherPerformance';
 import TeacherAnalytics from './pages/teacher/TeacherAnalytics';
 import TeacherFeedback from './pages/teacher/TeacherFeedback';
+import TeacherQueries from './pages/teacher/TeacherQueries';
 import TeacherNotifications from './pages/teacher/TeacherNotifications';
 import TeacherProfile from './pages/teacher/TeacherProfile';
 import StudentLayout from './components/StudentLayout';
@@ -220,6 +221,16 @@ function App() {
             <ProtectedRoute allowedRoles={['teacher', 'admin']}>
               <TeacherLayout>
                 <TeacherFeedback />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/queries"
+          element={
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <TeacherLayout>
+                <TeacherQueries />
               </TeacherLayout>
             </ProtectedRoute>
           }

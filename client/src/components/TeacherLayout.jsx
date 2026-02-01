@@ -17,6 +17,7 @@ const TeacherLayout = ({ children }) => {
     { path: '/teacher/performance', label: 'Student Performance', icon: '📈' },
     { path: '/teacher/analytics', label: 'Class Analytics', icon: '📊' },
     { path: '/teacher/feedback', label: 'Feedback', icon: '💬' },
+    { path: '/teacher/queries', label: 'Student Queries', icon: '📩' },
     { path: '/teacher/notifications', label: 'Notifications', icon: '🔔' },
     { path: '/teacher/profile', label: 'Profile', icon: '👤' },
   ];
