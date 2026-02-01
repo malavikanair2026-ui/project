@@ -20,8 +20,8 @@ const TeacherFeedback = () => {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user?._id) fetchData();
+  }, [user?._id]);
 
   useEffect(() => {
     if (selectedStudent) {
@@ -100,18 +100,12 @@ const TeacherFeedback = () => {
     return <LoadingSpinner />;
   }
 
-  const teacherClasses = classes.filter((cls) => {
-    return cls.subjects?.some(
-      (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
-    );
+  // Students in teacher's classes; fallback to all students so dropdown is never empty
+  const classStudents = students.filter((s) => {
+    const studentClassId = s.class?._id || s.class;
+    return classes.some((cls) => String(cls._id) === String(studentClassId));
   });
-
-  const classStudents = teacherClasses.length > 0
-    ? students.filter((s) => {
-        const studentClassId = s.class?._id || s.class;
-        return teacherClasses.some((cls) => String(cls._id) === String(studentClassId));
-      })
-    : [];
+  const studentsForDropdown = classStudents.length > 0 ? classStudents : students;
 
   const selectedStudentObj = students.find((s) => s._id === selectedStudent);
 
@@ -142,7 +136,7 @@ const TeacherFeedback = () => {
                 required
               >
                 <option value="">Select Student</option>
-                {classStudents.map((student) => (
+                {studentsForDropdown.map((student) => (
                   <option key={student._id} value={student._id}>
                     {student.name} - {student.class?.class_name || student.class || 'N/A'} {student.section} (ID: {student.student_id})
                   </option>
@@ -194,9 +188,9 @@ const TeacherFeedback = () => {
             style={styles.select}
           >
             <option value="">Select Student to View Feedbacks</option>
-            {classStudents.map((student) => (
+            {studentsForDropdown.map((student) => (
               <option key={student._id} value={student._id}>
-                {student.name} - {student.class} {student.section} (ID: {student.student_id})
+                {student.name} - {student.class?.class_name || student.class || 'N/A'} {student.section} (ID: {student.student_id})
               </option>
             ))}
           </select>

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { resultsAPI, studentsAPI, analyticsAPI } from '../../services/api';
+import { resultsAPI, studentsAPI, analyticsAPI, classesAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PrincipalAnalytics = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [semesterFilter, setSemesterFilter] = useState('');
+  const [classFilter, setClassFilter] = useState('');
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState({
     totalStudents: 0,
@@ -22,6 +24,19 @@ const PrincipalAnalytics = () => {
   const { showToast } = useToast();
 
   useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const classesRes = await classesAPI.getAll();
+        const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
+        setClasses(classesData);
+      } catch (err) {
+        console.error('Failed to fetch classes:', err);
+      }
+    };
+    fetchClasses();
+  }, []);
+
+  useEffect(() => {
     fetchOverview();
   }, [semesterFilter]);
 
@@ -33,7 +48,7 @@ const PrincipalAnalytics = () => {
     } else if (activeTab === 'rankings') {
       fetchRankings();
     }
-  }, [activeTab, semesterFilter]);
+  }, [activeTab, semesterFilter, classFilter]);
 
   const fetchOverview = async () => {
     try {
@@ -105,7 +120,7 @@ const PrincipalAnalytics = () => {
 
   const fetchRankings = async () => {
     try {
-      const response = await analyticsAPI.getRankings(semesterFilter);
+      const response = await analyticsAPI.getRankings(semesterFilter, classFilter || undefined);
       setRankings(response.data);
     } catch (error) {
       console.error('Failed to fetch rankings:', error);
@@ -113,10 +128,15 @@ const PrincipalAnalytics = () => {
     }
   };
 
+  // Same source as admin Class Management: semesters and classes from classesAPI
   const getUniqueSemesters = () => {
-    // This would ideally come from results, but for now we'll use a placeholder
-    return [];
+    const semesters = [...new Set(
+      classes.flatMap((c) => (c.semesters || []).map((s) => s.semester_name).filter(Boolean))
+    )].filter(Boolean).sort();
+    return semesters;
   };
+
+  const uniqueClasses = classes.map((c) => c.class_name).filter(Boolean).sort();
 
   if (loading && activeTab === 'overview') {
     return <LoadingSpinner />;
@@ -130,18 +150,32 @@ const PrincipalAnalytics = () => {
     <div>
       <div style={styles.header}>
         <h2 style={styles.title}>Performance Analytics</h2>
-        <select
-          value={semesterFilter}
-          onChange={(e) => setSemesterFilter(e.target.value)}
-          style={styles.select}
-        >
-          <option value="">All Semesters</option>
-          {getUniqueSemesters().map((sem) => (
-            <option key={sem} value={sem}>
-              {sem}
-            </option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select
+            value={classFilter}
+            onChange={(e) => setClassFilter(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Classes</option>
+            {uniqueClasses.map((cls) => (
+              <option key={cls} value={cls}>
+                {cls}
+              </option>
+            ))}
+          </select>
+          <select
+            value={semesterFilter}
+            onChange={(e) => setSemesterFilter(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Semesters</option>
+            {getUniqueSemesters().map((sem) => (
+              <option key={sem} value={sem}>
+                {sem}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Tabs */}

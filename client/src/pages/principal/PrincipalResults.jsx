@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { resultsAPI, studentsAPI } from '../../services/api';
+import { resultsAPI, studentsAPI, classesAPI } from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PrincipalResults = () => {
   const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [students, setStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
   const [filterSemester, setFilterSemester] = useState('');
+  const [filterSection, setFilterSection] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -17,13 +19,16 @@ const PrincipalResults = () => {
 
   const fetchData = async () => {
     try {
-      const [resultsRes, studentsRes] = await Promise.all([
+      const [resultsRes, studentsRes, classesRes] = await Promise.all([
         resultsAPI.getAll(),
         studentsAPI.getAll(),
+        classesAPI.getAll(),
       ]);
 
       setResults(resultsRes.data);
       setStudents(studentsRes.data);
+      const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
+      setClasses(classesData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -46,6 +51,13 @@ const PrincipalResults = () => {
       filtered = filtered.filter((r) => r.semester === filterSemester);
     }
 
+    if (filterSection) {
+      filtered = filtered.filter((r) => {
+        const student = students.find((s) => s._id === r.student?._id || s._id === r.student);
+        return student?.section === filterSection;
+      });
+    }
+
     return filtered;
   };
 
@@ -61,8 +73,20 @@ const PrincipalResults = () => {
     navigate(`/principal/student/${studentId}`);
   };
 
-  const uniqueClasses = [...new Set(students.map((s) => s.class?.class_name || s.class).filter(Boolean))];
-  const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
+  // Same source as admin Class Management: classes and semesters from classesAPI
+  const uniqueClasses = classes.map((c) => c.class_name).filter(Boolean).sort();
+  const uniqueSemesters = [...new Set(
+    classes.flatMap((c) => (c.semesters || []).map((s) => s.semester_name).filter(Boolean))
+  )].filter(Boolean).sort();
+
+  // Sections from students (same as admin Student Management)
+  const studentsForSectionFilter = filterClass
+    ? students.filter((s) => {
+        const studentClassName = s.class?.class_name || s.class;
+        return studentClassName === filterClass;
+      })
+    : students;
+  const uniqueSections = [...new Set(studentsForSectionFilter.map((s) => s.section).filter(Boolean))].sort();
 
   if (loading) {
     return <LoadingSpinner />;
@@ -77,7 +101,10 @@ const PrincipalResults = () => {
         <div style={styles.filters}>
           <select
             value={filterClass}
-            onChange={(e) => setFilterClass(e.target.value)}
+            onChange={(e) => {
+              setFilterClass(e.target.value);
+              setFilterSection('');
+            }}
             style={styles.select}
           >
             <option value="">All Classes</option>
@@ -96,6 +123,18 @@ const PrincipalResults = () => {
             {uniqueSemesters.map((sem) => (
               <option key={sem} value={sem}>
                 {sem}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterSection}
+            onChange={(e) => setFilterSection(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Sections</option>
+            {uniqueSections.map((sec) => (
+              <option key={sec} value={sec}>
+                {sec}
               </option>
             ))}
           </select>

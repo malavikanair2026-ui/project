@@ -19,15 +19,25 @@ const StudentFeedback = () => {
       const studentRes = await studentsAPI.getByUserId(user._id);
       setStudent(studentRes.data);
 
-      // Fetch feedback
-      const feedbackRes = await feedbackAPI.getByStudent(studentRes.data._id);
-      setFeedbacks(feedbackRes.data);
+      if (!studentRes.data?._id) {
+        setLoading(false);
+        return;
+      }
 
-      // Fetch notifications
-      const notificationsRes = await notificationsAPI.getByStudent(studentRes.data._id);
-      setNotifications(notificationsRes.data);
+      const studentId = studentRes.data._id;
+
+      // Fetch feedback and notifications in parallel
+      const [feedbackRes, notificationsRes] = await Promise.all([
+        feedbackAPI.getByStudent(studentId),
+        notificationsAPI.getByStudent(studentId),
+      ]);
+
+      setFeedbacks(Array.isArray(feedbackRes?.data) ? feedbackRes.data : []);
+      setNotifications(Array.isArray(notificationsRes?.data) ? notificationsRes.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      setFeedbacks([]);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }

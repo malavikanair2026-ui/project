@@ -1,12 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const Feedback = require('../models/Feedback');
-const { protect } = require('../middleware/auth');
+const Student = require('../models/Student');
+const { protect, authorize } = require('../middleware/auth');
 
-// Get feedback for a student
+// Get feedback for a student (student can only get own; teacher/admin can get any)
 router.get('/student/:studentId', protect, async (req, res) => {
   try {
-    const feedbacks = await Feedback.find({ student: req.params.studentId })
+    const { studentId } = req.params;
+    const isTeacherOrAdmin = ['teacher', 'admin'].includes(req.user?.role);
+
+    if (!isTeacherOrAdmin) {
+      const studentRecord = await Student.findOne({ user: req.user._id });
+      if (!studentRecord || String(studentRecord._id) !== String(studentId)) {
+        return res.status(403).json({ message: 'Not authorized to view this feedback' });
+      }
+    }
+
+    const feedbacks = await Feedback.find({ student: studentId })
       .populate('teacher', 'name email')
       .sort({ createdAt: -1 });
     res.json(feedbacks);
@@ -17,7 +28,7 @@ router.get('/student/:studentId', protect, async (req, res) => {
 });
 
 // Create feedback (teacher/admin only)
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, authorize('teacher', 'admin'), async (req, res) => {
   try {
     const { student, feedback, feedback_type } = req.body;
     const feedbackDoc = await Feedback.create({

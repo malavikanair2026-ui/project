@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { studentsAPI, resultsAPI } from '../../services/api';
+import { studentsAPI, resultsAPI, classesAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PrincipalStudents = () => {
   const [students, setStudents] = useState([]);
   const [results, setResults] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
   const [filterSection, setFilterSection] = useState('');
@@ -21,13 +22,16 @@ const PrincipalStudents = () => {
 
   const fetchData = async () => {
     try {
-      const [studentsRes, resultsRes] = await Promise.all([
+      const [studentsRes, resultsRes, classesRes] = await Promise.all([
         studentsAPI.getAll(),
         resultsAPI.getAll(),
+        classesAPI.getAll(),
       ]);
 
       setStudents(studentsRes.data);
       setResults(resultsRes.data);
+      const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
+      setClasses(classesData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load students', 'error');
@@ -120,7 +124,8 @@ const PrincipalStudents = () => {
 
   const filteredStudents = getFilteredStudents();
   const groupedStudents = groupStudentsByClass(filteredStudents);
-  const uniqueClasses = [...new Set(students.map((s) => s.class?.class_name || s.class).filter(Boolean))].sort();
+  // Same source as admin Class Management: classes from classesAPI
+  const uniqueClasses = classes.map((c) => c.class_name).filter(Boolean).sort();
   
   // Get unique sections from filtered students (by class if selected)
   const studentsForSectionFilter = filterClass
