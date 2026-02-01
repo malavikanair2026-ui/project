@@ -139,7 +139,7 @@ const PrincipalResults = () => {
                 return (
                   <tr key={result._id} style={styles.tableRow}>
                     <td style={styles.nameCell}>{student?.name || result.student?.name || '-'}</td>
-                    <td>{student?.class?.class_name || student?.class || '-'}</td>
+                    <td>{student?.class?.class_name || student?.class || 'cs'}</td>
                     <td>{student?.section || '-'}</td>
                     <td>{result.semester}</td>
                     <td>{result.total_marks}</td>

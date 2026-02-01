@@ -64,8 +64,17 @@ const StudentManagement = () => {
     setError('');
 
     try {
+      // When adding, resolve class name to class _id (server expects _id)
+      let classId = formData.class;
+      if (!editingStudent && formData.class) {
+        const matched = classes.find(
+          (c) => (c.class_name || '').toLowerCase() === (formData.class || '').trim().toLowerCase()
+        );
+        classId = matched?._id || formData.class;
+      }
       const submitData = {
         ...formData,
+        class: classId,
         student_id: Number(formData.student_id),
         dob: new Date(formData.dob),
       };
@@ -186,7 +195,21 @@ const StudentManagement = () => {
     <div>
       <div style={styles.header}>
         <h2 style={styles.title}>Student Management</h2>
-        <button onClick={() => setShowModal(true)} style={styles.addButton}>
+        <button
+          onClick={() => {
+            setEditingStudent(null);
+            setFormData({
+              student_id: '',
+              user: '',
+              name: '',
+              class: 'cs',
+              section: '',
+              dob: '',
+            });
+            setShowModal(true);
+          }}
+          style={styles.addButton}
+        >
           + Add Student
         </button>
       </div>
@@ -391,20 +414,32 @@ const StudentManagement = () => {
               </div>
               <div style={styles.formGroup}>
                 <label>Class</label>
-                <select
-                  name="class"
-                  value={formData.class}
-                  onChange={handleInputChange}
-                  required
-                  style={styles.input}
-                >
-                  <option value="">Select Class</option>
-                  {classOptions.map((classObj) => (
-                    <option key={classObj._id} value={classObj._id}>
-                      {classObj.class_name}
-                    </option>
-                  ))}
-                </select>
+                {editingStudent ? (
+                  <select
+                    name="class"
+                    value={formData.class}
+                    onChange={handleInputChange}
+                    required
+                    style={styles.input}
+                  >
+                    <option value="">Select Class</option>
+                    {classOptions.map((classObj) => (
+                      <option key={classObj._id} value={classObj._id}>
+                        {classObj.class_name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    name="class"
+                    value={formData.class}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g. cs"
+                    style={styles.input}
+                  />
+                )}
               </div>
               <div style={styles.formGroup}>
                 <label>Section</label>

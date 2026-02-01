@@ -5,7 +5,9 @@ const Student = require('../models/Student');
 const Marks = require('../models/Marks');
 const Subject = require('../models/Subject');
 
-// Get class-wise performance
+const Class = require('../models/Class');
+
+// Get class-wise performance with section-wise breakdown
 router.get('/class-performance', async (req, res) => {
   try {
     const { semester } = req.query;
@@ -13,68 +15,104 @@ router.get('/class-performance', async (req, res) => {
     if (semester) filter.semester = semester;
 
     const results = await Result.find(filter).populate('student');
-    const students = await Student.find();
+    const students = await Student.find().populate('class');
+    const classes = await Class.find();
+
+    const classMap = {};
+    classes.forEach((c) => { classMap[c._id.toString()] = c.class_name; });
 
     const classPerformance = {};
 
     results.forEach((result) => {
-      if (!result.student) return; // Skip orphaned results (deleted student)
+      if (!result.student) return;
       const student = students.find(
         (s) => s._id.toString() === result.student?._id?.toString() || s._id.toString() === result.student?.toString()
       );
-      if (!student?.name || !student?.class) return; // Skip unknown/missing student details
-      if (student?.class) {
-        const className = `${student.class} ${student.section || ''}`.trim();
-        if (!classPerformance[className]) {
-          classPerformance[className] = {
-            className,
-            totalStudents: 0,
-            resultsCount: 0,
-            totalPercentage: 0,
-            passCount: 0,
-            failCount: 0,
-            gradeDistribution: {},
-            students: [],
-          };
-        }
-        classPerformance[className].resultsCount += 1;
-        classPerformance[className].totalPercentage += result.percentage;
-        if (result.grade !== 'F') {
-          classPerformance[className].passCount += 1;
-        } else {
-          classPerformance[className].failCount += 1;
-        }
-        classPerformance[className].gradeDistribution[result.grade] =
-          (classPerformance[className].gradeDistribution[result.grade] || 0) + 1;
+      if (!student?.name || !student?.class) return;
+      const classId = student.class?._id?.toString() || student.class?.toString();
+      const className = student.class?.class_name || classMap[classId] || classId;
+      const section = student.section || '-';
 
-        // Add student result
-        classPerformance[className].students.push({
-          studentId: student.student_id,
-          name: student.name,
-          percentage: result.percentage,
-          grade: result.grade,
-          rank: 0, // Will be calculated later
-        });
+      if (!classPerformance[className]) {
+        classPerformance[className] = {
+          className,
+          totalStudents: 0,
+          resultsCount: 0,
+          totalPercentage: 0,
+          passCount: 0,
+          failCount: 0,
+          gradeDistribution: {},
+          students: [],
+          sections: {},
+        };
       }
+
+      if (!classPerformance[className].sections[section]) {
+        classPerformance[className].sections[section] = {
+          sectionName: section,
+          totalStudents: 0,
+          resultsCount: 0,
+          totalPercentage: 0,
+          passCount: 0,
+          failCount: 0,
+          gradeDistribution: {},
+          students: [],
+        };
+      }
+
+      const classData = classPerformance[className];
+      const sectionData = classData.sections[section];
+
+      classData.resultsCount += 1;
+      classData.totalPercentage += result.percentage;
+      if (result.grade !== 'F') classData.passCount += 1;
+      else classData.failCount += 1;
+      classData.gradeDistribution[result.grade] =
+        (classData.gradeDistribution[result.grade] || 0) + 1;
+      classData.students.push({
+        studentId: student.student_id,
+        name: student.name,
+        section,
+        percentage: result.percentage,
+        grade: result.grade,
+        rank: 0,
+      });
+
+      sectionData.resultsCount += 1;
+      sectionData.totalPercentage += result.percentage;
+      if (result.grade !== 'F') sectionData.passCount += 1;
+      else sectionData.failCount += 1;
+      sectionData.gradeDistribution[result.grade] =
+        (sectionData.gradeDistribution[result.grade] || 0) + 1;
+      sectionData.students.push({
+        studentId: student.student_id,
+        name: student.name,
+        percentage: result.percentage,
+        grade: result.grade,
+        rank: 0,
+      });
     });
 
-    // Calculate averages and ranks for each class
     Object.keys(classPerformance).forEach((className) => {
       const classData = classPerformance[className];
       classData.averagePercentage =
         classData.resultsCount > 0 ? classData.totalPercentage / classData.resultsCount : 0;
       classData.passRate =
         classData.resultsCount > 0 ? (classData.passCount / classData.resultsCount) * 100 : 0;
-
-      // Calculate ranks within class
       classData.students.sort((a, b) => b.percentage - a.percentage);
-      classData.students.forEach((student, index) => {
-        student.rank = index + 1;
-      });
+      classData.students.forEach((s, i) => { s.rank = i + 1; });
+      classData.totalStudents = new Set(classData.students.map((s) => s.studentId)).size;
 
-      // Count unique students
-      const uniqueStudents = new Set(classData.students.map((s) => s.studentId));
-      classData.totalStudents = uniqueStudents.size;
+      Object.keys(classData.sections).forEach((section) => {
+        const sectionData = classData.sections[section];
+        sectionData.averagePercentage =
+          sectionData.resultsCount > 0 ? sectionData.totalPercentage / sectionData.resultsCount : 0;
+        sectionData.passRate =
+          sectionData.resultsCount > 0 ? (sectionData.passCount / sectionData.resultsCount) * 100 : 0;
+        sectionData.students.sort((a, b) => b.percentage - a.percentage);
+        sectionData.students.forEach((s, i) => { s.rank = i + 1; });
+        sectionData.totalStudents = new Set(sectionData.students.map((s) => s.studentId)).size;
+      });
     });
 
     res.json(classPerformance);
@@ -178,7 +216,7 @@ router.get('/rankings', async (req, res) => {
           rank: 0,
           studentId: student?.student_id ?? '-',
           name: student?.name ?? '-',
-          class: student?.class ?? '-',
+          class: student?.class ?? 'cs',
           section: student?.section || '',
           semester: result.semester,
           totalMarks: result.total_marks,
@@ -232,7 +270,7 @@ router.get('/toppers', async (req, res) => {
         rank: index + 1,
         studentId: result.student?.student_id ?? '-',
         name: result.student?.name ?? '-',
-        class: result.student?.class ?? '-',
+        class: result.student?.class ?? 'cs',
         section: result.student?.section || '',
         percentage: result.percentage,
         grade: result.grade,

@@ -495,7 +495,7 @@ const ClassManagement = () => {
                         {subj.teacher && (
                           <span style={styles.teacherName}>
                             {' '}
-                            - Teacher: {subj.teacher?.name || 'Unassigned'}
+                            - Teacher: {subj.teacher?.name || 'cs'}
                           </span>
                         )}
                       </div>

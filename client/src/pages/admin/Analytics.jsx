@@ -312,6 +312,38 @@ const Analytics = () => {
                       }}
                     />
                   </div>
+                  {classData.sections && Object.keys(classData.sections).length > 0 && (
+                    <div style={styles.sectionsContainer}>
+                      <h4 style={styles.sectionsTitle}>Section-wise</h4>
+                      {Object.values(classData.sections).map((section) => (
+                        <div key={section.sectionName} style={styles.sectionItem}>
+                          <div style={styles.sectionHeader}>
+                            <span style={styles.sectionName}>Section {section.sectionName}</span>
+                            <span style={styles.sectionStats}>
+                              {section.averagePercentage?.toFixed(1)}% avg · {section.passRate?.toFixed(0)}% pass
+                            </span>
+                          </div>
+                          <div style={styles.sectionBar}>
+                            <div
+                              style={{
+                                width: `${Math.min(section.averagePercentage || 0, 100)}%`,
+                                height: '8px',
+                                backgroundColor:
+                                  (section.averagePercentage || 0) >= 80
+                                    ? '#27ae60'
+                                    : (section.averagePercentage || 0) >= 60
+                                    ? '#3498db'
+                                    : (section.averagePercentage || 0) >= 40
+                                    ? '#f39c12'
+                                    : '#e74c3c',
+                                borderRadius: '4px',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -397,7 +429,7 @@ const Analytics = () => {
                       </td>
                       <td style={styles.td}>{student.studentId}</td>
                       <td style={styles.td}>{student.name}</td>
-                      <td style={styles.td}>{student.class?.class_name || student.class || '-'}</td>
+                      <td style={styles.td}>{student.class?.class_name || student.class || 'cs'}</td>
                       <td style={styles.td}>{student.section}</td>
                       <td style={styles.td}>{student.semester}</td>
                       <td style={styles.td}>{student.totalMarks}</td>
@@ -630,6 +662,42 @@ const styles = {
   progressBar: {
     height: '100%',
     transition: 'width 0.3s',
+  },
+  sectionsContainer: {
+    marginTop: '20px',
+    paddingTop: '15px',
+    borderTop: '1px solid #e0e0e0',
+  },
+  sectionsTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: '12px',
+    marginTop: 0,
+  },
+  sectionItem: {
+    marginBottom: '12px',
+  },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4px',
+    fontSize: '13px',
+  },
+  sectionName: {
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  sectionStats: {
+    color: '#7f8c8d',
+    fontSize: '12px',
+  },
+  sectionBar: {
+    height: '8px',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '4px',
+    overflow: 'hidden',
   },
   subjectGrid: {
     display: 'grid',

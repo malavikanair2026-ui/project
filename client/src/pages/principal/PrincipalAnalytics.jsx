@@ -7,7 +7,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 const PrincipalAnalytics = () => {
   const { selectedSemester } = usePrincipal();
   const [activeTab, setActiveTab] = useState('overview');
-  const [classFilter, setClassFilter] = useState('');
+  const [classFilter, setClassFilter] = useState('cs');
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState({
@@ -82,7 +82,7 @@ const PrincipalAnalytics = () => {
           percentage: r.percentage,
           grade: r.grade,
           studentId: r.student?.student_id ?? '-',
-          class: r.student?.class ?? '-',
+          class: r.student?.class ?? 'cs',
         }));
 
       setOverview({
@@ -363,6 +363,31 @@ const PrincipalAnalytics = () => {
                       </span>
                     ))}
                   </div>
+                  {data.sections && Object.keys(data.sections).length > 0 && (
+                    <div style={styles.sectionsContainer}>
+                      <div style={styles.sectionsTitle}>Section-wise</div>
+                      {Object.values(data.sections).map((section) => (
+                        <div key={section.sectionName} style={styles.sectionItem}>
+                          <div style={styles.sectionHeader}>
+                            <span style={styles.sectionName}>Section {section.sectionName}</span>
+                            <span style={styles.sectionStats}>
+                              {section.averagePercentage?.toFixed(1)}% avg · {section.passRate?.toFixed(0)}% pass
+                            </span>
+                          </div>
+                          <div style={styles.sectionBar}>
+                            <div
+                              style={{
+                                width: `${Math.min(section.averagePercentage || 0, 100)}%`,
+                                height: '8px',
+                                backgroundColor: getPerformanceColor(section.averagePercentage || 0),
+                                borderRadius: '4px',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -764,6 +789,41 @@ const styles = {
     borderRadius: '12px',
     fontSize: '12px',
     color: '#2c3e50',
+  },
+  sectionsContainer: {
+    marginTop: '15px',
+    paddingTop: '15px',
+    borderTop: '1px solid #dee2e6',
+  },
+  sectionsTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: '10px',
+  },
+  sectionItem: {
+    marginBottom: '10px',
+  },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4px',
+    fontSize: '13px',
+  },
+  sectionName: {
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  sectionStats: {
+    color: '#7f8c8d',
+    fontSize: '12px',
+  },
+  sectionBar: {
+    height: '8px',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '4px',
+    overflow: 'hidden',
   },
   subjectGrid: {
     display: 'grid',
