@@ -16,7 +16,7 @@ const Analytics = () => {
     gradeDistribution: {},
     topPerformers: [],
   });
-  const [classPerformance, setClassPerformance] = useState({});
+  const [sectionPerformance, setSectionPerformance] = useState({});
   const [subjectAnalysis, setSubjectAnalysis] = useState({});
   const [rankings, setRankings] = useState([]);
   const { showToast } = useToast();
@@ -26,8 +26,8 @@ const Analytics = () => {
   }, [semesterFilter]);
 
   useEffect(() => {
-    if (activeTab === 'class') {
-      fetchClassPerformance();
+    if (activeTab === 'section') {
+      fetchSectionPerformance();
     } else if (activeTab === 'subject') {
       fetchSubjectAnalysis();
     } else if (activeTab === 'rankings') {
@@ -85,13 +85,13 @@ const Analytics = () => {
     }
   };
 
-  const fetchClassPerformance = async () => {
+  const fetchSectionPerformance = async () => {
     try {
-      const response = await analyticsAPI.getClassPerformance(semesterFilter);
-      setClassPerformance(response.data);
+      const response = await analyticsAPI.getSectionPerformance(semesterFilter);
+      setSectionPerformance(response.data);
     } catch (error) {
-      console.error('Failed to fetch class performance:', error);
-      showToast('Failed to load class performance', 'error');
+      console.error('Failed to fetch section performance:', error);
+      showToast('Failed to load section performance', 'error');
     }
   };
 
@@ -148,10 +148,10 @@ const Analytics = () => {
           Overview
         </button>
         <button
-          style={{ ...styles.tab, ...(activeTab === 'class' ? styles.tabActive : {}) }}
-          onClick={() => setActiveTab('class')}
+          style={{ ...styles.tab, ...(activeTab === 'section' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('section')}
         >
-          Class-wise Performance
+          Section-wise Performance
         </button>
         <button
           style={{ ...styles.tab, ...(activeTab === 'subject' ? styles.tabActive : {}) }}
@@ -267,88 +267,68 @@ const Analytics = () => {
         </div>
       )}
 
-      {activeTab === 'class' && (
+      {activeTab === 'section' && (
         <div>
-          {Object.keys(classPerformance).length > 0 ? (
+          {Object.keys(sectionPerformance).length > 0 ? (
             <div style={styles.classGrid}>
-              {Object.values(classPerformance).map((classData) => (
-                <div key={classData.className} style={styles.classCard}>
-                  <h3 style={styles.classTitle}>{classData.className}</h3>
+              {Object.values(sectionPerformance).map((sectionData) => (
+                <div key={sectionData.sectionName} style={styles.classCard}>
+                  <h3 style={styles.classTitle}>Section {sectionData.sectionName}</h3>
                   <div style={styles.classStats}>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Average:</span>
                       <span style={styles.classStatValue}>
-                        {classData.averagePercentage.toFixed(2)}%
+                        {sectionData.averagePercentage.toFixed(2)}%
                       </span>
                     </div>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Pass Rate:</span>
                       <span style={styles.classStatValue}>
-                        {classData.passRate.toFixed(1)}%
+                        {sectionData.passRate.toFixed(1)}%
                       </span>
                     </div>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Students:</span>
-                      <span style={styles.classStatValue}>{classData.totalStudents}</span>
+                      <span style={styles.classStatValue}>{sectionData.totalStudents}</span>
                     </div>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Results:</span>
-                      <span style={styles.classStatValue}>{classData.resultsCount}</span>
+                      <span style={styles.classStatValue}>{sectionData.resultsCount}</span>
                     </div>
                   </div>
                   <div style={styles.progressBarContainer}>
                     <div
                       style={{
                         ...styles.progressBar,
-                        width: `${Math.min(classData.averagePercentage, 100)}%`,
+                        width: `${Math.min(sectionData.averagePercentage, 100)}%`,
                         backgroundColor:
-                          classData.averagePercentage >= 80
+                          sectionData.averagePercentage >= 80
                             ? '#27ae60'
-                            : classData.averagePercentage >= 60
+                            : sectionData.averagePercentage >= 60
                             ? '#3498db'
-                            : classData.averagePercentage >= 40
+                            : sectionData.averagePercentage >= 40
                             ? '#f39c12'
                             : '#e74c3c',
                       }}
                     />
                   </div>
-                  {classData.sections && Object.keys(classData.sections).length > 0 && (
+                  {sectionData.gradeDistribution && Object.keys(sectionData.gradeDistribution).length > 0 && (
                     <div style={styles.sectionsContainer}>
-                      <h4 style={styles.sectionsTitle}>Section-wise</h4>
-                      {Object.values(classData.sections).map((section) => (
-                        <div key={section.sectionName} style={styles.sectionItem}>
-                          <div style={styles.sectionHeader}>
-                            <span style={styles.sectionName}>Section {section.sectionName}</span>
-                            <span style={styles.sectionStats}>
-                              {section.averagePercentage?.toFixed(1)}% avg · {section.passRate?.toFixed(0)}% pass
-                            </span>
-                          </div>
-                          <div style={styles.sectionBar}>
-                            <div
-                              style={{
-                                width: `${Math.min(section.averagePercentage || 0, 100)}%`,
-                                height: '8px',
-                                backgroundColor:
-                                  (section.averagePercentage || 0) >= 80
-                                    ? '#27ae60'
-                                    : (section.averagePercentage || 0) >= 60
-                                    ? '#3498db'
-                                    : (section.averagePercentage || 0) >= 40
-                                    ? '#f39c12'
-                                    : '#e74c3c',
-                                borderRadius: '4px',
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                      <h4 style={styles.sectionsTitle}>Grade distribution</h4>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {Object.entries(sectionData.gradeDistribution).map(([grade, count]) => (
+                          <span key={grade} style={styles.gradeTag}>
+                            {grade}: {count}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <div style={styles.noDataCard}>No class performance data available</div>
+            <div style={styles.noDataCard}>No section performance data available</div>
           )}
         </div>
       )}
@@ -491,7 +471,9 @@ const styles = {
     padding: '12px 24px',
     backgroundColor: 'transparent',
     border: 'none',
-    borderBottom: '3px solid transparent',
+    borderBottomWidth: '3px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'transparent',
     cursor: 'pointer',
     fontSize: '16px',
     fontWeight: '500',
@@ -603,6 +585,13 @@ const styles = {
     borderRadius: '12px',
     fontSize: '12px',
     fontWeight: '600',
+  },
+  gradeTag: {
+    padding: '4px 10px',
+    backgroundColor: '#f0f0f0',
+    borderRadius: '12px',
+    fontSize: '12px',
+    color: '#2c3e50',
   },
   noData: {
     textAlign: 'center',

@@ -148,6 +148,10 @@ export const analyticsAPI = {
     const params = semester ? { semester } : {};
     return api.get('/analytics/class-performance', { params });
   },
+  getSectionPerformance: (semester) => {
+    const params = semester ? { semester } : {};
+    return api.get('/analytics/section-performance', { params });
+  },
   getSubjectAnalysis: (semester) => {
     const params = semester ? { semester } : {};
     return api.get('/analytics/subject-analysis', { params });

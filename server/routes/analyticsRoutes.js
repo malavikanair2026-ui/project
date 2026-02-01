@@ -122,6 +122,74 @@ router.get('/class-performance', async (req, res) => {
   }
 });
 
+// Get section-wise performance
+router.get('/section-performance', async (req, res) => {
+  try {
+    const { semester } = req.query;
+    const filter = {};
+    if (semester) filter.semester = semester;
+
+    const results = await Result.find(filter).populate('student');
+    const students = await Student.find().populate('class');
+
+    const sectionPerformance = {};
+
+    results.forEach((result) => {
+      if (!result.student) return;
+      const student = students.find(
+        (s) => s._id.toString() === result.student?._id?.toString() || s._id.toString() === result.student?.toString()
+      );
+      if (!student?.name) return;
+      const section = student.section || '-';
+
+      if (!sectionPerformance[section]) {
+        sectionPerformance[section] = {
+          sectionName: section,
+          totalStudents: 0,
+          resultsCount: 0,
+          totalPercentage: 0,
+          passCount: 0,
+          failCount: 0,
+          gradeDistribution: {},
+          students: [],
+        };
+      }
+
+      const sectionData = sectionPerformance[section];
+      sectionData.resultsCount += 1;
+      sectionData.totalPercentage += result.percentage;
+      if (result.grade !== 'F') sectionData.passCount += 1;
+      else sectionData.failCount += 1;
+      sectionData.gradeDistribution[result.grade] =
+        (sectionData.gradeDistribution[result.grade] || 0) + 1;
+      sectionData.students.push({
+        studentId: student.student_id,
+        name: student.name,
+        class: student.class?.class_name || student.class || 'cs',
+        percentage: result.percentage,
+        grade: result.grade,
+        rank: 0,
+      });
+    });
+
+    Object.keys(sectionPerformance).forEach((section) => {
+      const sectionData = sectionPerformance[section];
+      sectionData.averagePercentage =
+        sectionData.resultsCount > 0 ? sectionData.totalPercentage / sectionData.resultsCount : 0;
+      sectionData.passRate =
+        sectionData.resultsCount > 0 ? (sectionData.passCount / sectionData.resultsCount) * 100 : 0;
+      sectionData.students.sort((a, b) => b.percentage - a.percentage);
+      sectionData.students.forEach((s, i) => { s.rank = i + 1; });
+      sectionData.totalStudents = new Set(sectionData.students.map((s) => s.studentId)).size;
+    });
+
+    res.json(sectionPerformance);
+  } catch (error) {
+    console.error('Section performance error:', error);
+    res.status(500).json({ message: 'Failed to fetch section performance' });
+  }
+});
+
 // Get subject-wise analysis
 router.get('/subject-analysis', async (req, res) => {
   try {

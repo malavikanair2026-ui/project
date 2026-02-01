@@ -19,7 +19,7 @@ const PrincipalAnalytics = () => {
     gradeDistribution: {},
     topPerformers: [],
   });
-  const [classPerformance, setClassPerformance] = useState({});
+  const [sectionPerformance, setSectionPerformance] = useState({});
   const [subjectAnalysis, setSubjectAnalysis] = useState({});
   const [rankings, setRankings] = useState([]);
   const { showToast } = useToast();
@@ -42,8 +42,8 @@ const PrincipalAnalytics = () => {
   }, [selectedSemester]);
 
   useEffect(() => {
-    if (activeTab === 'class') {
-      fetchClassPerformance();
+    if (activeTab === 'section') {
+      fetchSectionPerformance();
     } else if (activeTab === 'subject') {
       fetchSubjectAnalysis();
     } else if (activeTab === 'rankings') {
@@ -102,13 +102,13 @@ const PrincipalAnalytics = () => {
     }
   };
 
-  const fetchClassPerformance = async () => {
+  const fetchSectionPerformance = async () => {
     try {
-      const response = await analyticsAPI.getClassPerformance(selectedSemester);
-      setClassPerformance(response.data);
+      const response = await analyticsAPI.getSectionPerformance(selectedSemester);
+      setSectionPerformance(response.data);
     } catch (error) {
-      console.error('Failed to fetch class performance:', error);
-      showToast('Failed to load class performance', 'error');
+      console.error('Failed to fetch section performance:', error);
+      showToast('Failed to load section performance', 'error');
     }
   };
 
@@ -177,11 +177,11 @@ const PrincipalAnalytics = () => {
         <button
           style={{
             ...styles.tab,
-            ...(activeTab === 'class' ? styles.tabActive : {}),
+            ...(activeTab === 'section' ? styles.tabActive : {}),
           }}
-          onClick={() => setActiveTab('class')}
+          onClick={() => setActiveTab('section')}
         >
-          🏫 Class Performance
+          🏫 Section Performance
         </button>
         <button
           style={{
@@ -316,18 +316,18 @@ const PrincipalAnalytics = () => {
         </div>
       )}
 
-      {activeTab === 'class' && (
+      {activeTab === 'section' && (
         <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Class-wise Performance</h3>
-          {Object.keys(classPerformance).length === 0 ? (
+          <h3 style={styles.cardTitle}>Section-wise Performance</h3>
+          {Object.keys(sectionPerformance).length === 0 ? (
             <LoadingSpinner />
           ) : (
             <div style={styles.classList}>
-              {Object.entries(classPerformance).map(([className, data]) => (
-                <div key={className} style={styles.classItem}>
+              {Object.entries(sectionPerformance).map(([sectionName, data]) => (
+                <div key={sectionName} style={styles.classItem}>
                   <div style={styles.classHeader}>
                     <div>
-                      <span style={styles.className}>{data.className}</span>
+                      <span style={styles.className}>Section {data.sectionName}</span>
                       <div style={styles.classStats}>
                         {data.totalStudents} students | {data.resultsCount} results
                       </div>
@@ -357,37 +357,12 @@ const PrincipalAnalytics = () => {
                     />
                   </div>
                   <div style={styles.gradeDistribution}>
-                    {Object.entries(data.gradeDistribution).map(([grade, count]) => (
+                    {Object.entries(data.gradeDistribution || {}).map(([grade, count]) => (
                       <span key={grade} style={styles.gradeTag}>
                         {grade}: {count}
                       </span>
                     ))}
                   </div>
-                  {data.sections && Object.keys(data.sections).length > 0 && (
-                    <div style={styles.sectionsContainer}>
-                      <div style={styles.sectionsTitle}>Section-wise</div>
-                      {Object.values(data.sections).map((section) => (
-                        <div key={section.sectionName} style={styles.sectionItem}>
-                          <div style={styles.sectionHeader}>
-                            <span style={styles.sectionName}>Section {section.sectionName}</span>
-                            <span style={styles.sectionStats}>
-                              {section.averagePercentage?.toFixed(1)}% avg · {section.passRate?.toFixed(0)}% pass
-                            </span>
-                          </div>
-                          <div style={styles.sectionBar}>
-                            <div
-                              style={{
-                                width: `${Math.min(section.averagePercentage || 0, 100)}%`,
-                                height: '8px',
-                                backgroundColor: getPerformanceColor(section.averagePercentage || 0),
-                                borderRadius: '4px',
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -579,7 +554,9 @@ const styles = {
     fontSize: '16px',
     fontWeight: '500',
     color: '#7f8c8d',
-    borderBottom: '3px solid transparent',
+    borderBottomWidth: '3px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'transparent',
     transition: 'all 0.2s',
   },
   tabActive: {

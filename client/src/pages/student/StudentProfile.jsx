@@ -307,7 +307,9 @@ const styles = {
     fontSize: '16px',
     fontWeight: '500',
     color: '#7f8c8d',
-    borderBottom: '3px solid transparent',
+    borderBottomWidth: '3px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'transparent',
     transition: 'all 0.2s',
   },
   tabActive: {
