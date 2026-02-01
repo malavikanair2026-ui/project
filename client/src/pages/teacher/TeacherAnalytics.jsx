@@ -114,15 +114,19 @@ const TeacherAnalytics = () => {
 
   // Top performers
   const topPerformers = [...results]
+    .filter((r) => {
+      const student = students.find((s) => s._id === (r.student?._id || r.student));
+      return student?.name;
+    })
     .sort((a, b) => b.percentage - a.percentage)
     .slice(0, 10)
     .map((r) => {
       const student = students.find((s) => s._id === (r.student?._id || r.student));
       return {
-        name: student?.name || 'Unknown',
+        name: student?.name,
         percentage: r.percentage,
         grade: r.grade,
-        studentId: student?.student_id || 'N/A',
+        studentId: student?.student_id ?? '-',
       };
     });
 

@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentsAPI, resultsAPI, classesAPI } from '../../services/api';
+import { usePrincipal } from '../../context/PrincipalContext';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PrincipalStudents = () => {
+  const { selectedSection } = usePrincipal();
   const [students, setStudents] = useState([]);
   const [results, setResults] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
-  const [filterSection, setFilterSection] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClasses, setExpandedClasses] = useState({});
   const navigate = useNavigate();
@@ -51,9 +52,9 @@ const PrincipalStudents = () => {
       });
     }
 
-    // Filter by section
-    if (filterSection) {
-      filtered = filtered.filter((s) => s.section === filterSection);
+    // Filter by section (from layout - same as Class Management source)
+    if (selectedSection) {
+      filtered = filtered.filter((s) => s.section === selectedSection);
     }
 
     // Filter by search term
@@ -124,17 +125,8 @@ const PrincipalStudents = () => {
 
   const filteredStudents = getFilteredStudents();
   const groupedStudents = groupStudentsByClass(filteredStudents);
-  // Same source as admin Class Management: classes from classesAPI
+  // Same source as Class Management: classes from classesAPI
   const uniqueClasses = classes.map((c) => c.class_name).filter(Boolean).sort();
-  
-  // Get unique sections from filtered students (by class if selected)
-  const studentsForSectionFilter = filterClass
-    ? students.filter((s) => {
-        const studentClassName = s.class?.class_name || s.class;
-        return studentClassName === filterClass;
-      })
-    : students;
-  const uniqueSections = [...new Set(studentsForSectionFilter.map(s => s.section).filter(Boolean))].sort();
 
   return (
     <div>
@@ -150,28 +142,13 @@ const PrincipalStudents = () => {
           />
           <select
             value={filterClass}
-            onChange={(e) => {
-              setFilterClass(e.target.value);
-              setFilterSection(''); // Reset section when class changes
-            }}
+            onChange={(e) => setFilterClass(e.target.value)}
             style={styles.select}
           >
             <option value="">All Classes</option>
             {uniqueClasses.map((cls) => (
               <option key={cls} value={cls}>
                 {cls}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterSection}
-            onChange={(e) => setFilterSection(e.target.value)}
-            style={styles.select}
-          >
-            <option value="">All Sections</option>
-            {uniqueSections.map((section) => (
-              <option key={section} value={section}>
-                {section}
               </option>
             ))}
           </select>

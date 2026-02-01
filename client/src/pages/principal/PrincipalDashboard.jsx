@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { studentsAPI, resultsAPI, subjectsAPI } from '../../services/api';
+import { studentsAPI, resultsAPI } from '../../services/api';
+import { usePrincipal } from '../../context/PrincipalContext';
 
 const PrincipalDashboard = () => {
+  const { selectedSemester, selectedSection } = usePrincipal();
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalResults: 0,
@@ -12,7 +14,7 @@ const PrincipalDashboard = () => {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [selectedSemester, selectedSection]);
 
   const fetchStats = async () => {
     try {
@@ -21,8 +23,19 @@ const PrincipalDashboard = () => {
         resultsAPI.getAll(),
       ]);
 
-      const students = studentsRes.data;
-      const results = resultsRes.data;
+      let students = studentsRes.data;
+      let results = resultsRes.data;
+
+      if (selectedSection) {
+        students = students.filter((s) => s.section === selectedSection);
+        results = results.filter((r) => {
+          const student = studentsRes.data.find((s) => s._id === r.student?._id || s._id === r.student);
+          return student?.section === selectedSection;
+        });
+      }
+      if (selectedSemester) {
+        results = results.filter((r) => r.semester === selectedSemester);
+      }
 
       const passCount = results.filter((r) => r.grade !== 'F').length;
       const totalPercentage = results.reduce((sum, r) => sum + (r.percentage || 0), 0);

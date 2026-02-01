@@ -42,7 +42,7 @@ const TeacherClasses = () => {
                     .filter((s) => String(s.teacher?._id || s.teacher) === user?._id)
                     .map((s, idx) => (
                       <li key={idx} style={styles.listItem}>
-                        {s.subject?.subject_name || 'Unknown Subject'} (Max: {s.subject?.max_marks || '-'})
+                        {s.subject?.subject_name || '-'} (Max: {s.subject?.max_marks || '-'})
                       </li>
                     ))}
                 </ul>

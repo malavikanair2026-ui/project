@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { resultsAPI, studentsAPI, classesAPI } from '../../services/api';
+import { usePrincipal } from '../../context/PrincipalContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PrincipalResults = () => {
   const navigate = useNavigate();
+  const { selectedSemester, selectedSection } = usePrincipal();
   const [results, setResults] = useState([]);
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
-  const [filterSemester, setFilterSemester] = useState('');
-  const [filterSection, setFilterSection] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -47,16 +47,22 @@ const PrincipalResults = () => {
       });
     }
 
-    if (filterSemester) {
-      filtered = filtered.filter((r) => r.semester === filterSemester);
+    if (selectedSemester) {
+      filtered = filtered.filter((r) => r.semester === selectedSemester);
     }
 
-    if (filterSection) {
+    if (selectedSection) {
       filtered = filtered.filter((r) => {
         const student = students.find((s) => s._id === r.student?._id || s._id === r.student);
-        return student?.section === filterSection;
+        return student?.section === selectedSection;
       });
     }
+
+    // Remove details of unknown (orphaned results where student is missing)
+    filtered = filtered.filter((r) => {
+      const student = students.find((s) => s._id === r.student?._id || s._id === r.student);
+      return (student?.name || r.student?.name);
+    });
 
     return filtered;
   };
@@ -73,20 +79,8 @@ const PrincipalResults = () => {
     navigate(`/principal/student/${studentId}`);
   };
 
-  // Same source as admin Class Management: classes and semesters from classesAPI
+  // Classes from same source as Class Management (classesAPI)
   const uniqueClasses = classes.map((c) => c.class_name).filter(Boolean).sort();
-  const uniqueSemesters = [...new Set(
-    classes.flatMap((c) => (c.semesters || []).map((s) => s.semester_name).filter(Boolean))
-  )].filter(Boolean).sort();
-
-  // Sections from students (same as admin Student Management)
-  const studentsForSectionFilter = filterClass
-    ? students.filter((s) => {
-        const studentClassName = s.class?.class_name || s.class;
-        return studentClassName === filterClass;
-      })
-    : students;
-  const uniqueSections = [...new Set(studentsForSectionFilter.map((s) => s.section).filter(Boolean))].sort();
 
   if (loading) {
     return <LoadingSpinner />;
@@ -101,40 +95,13 @@ const PrincipalResults = () => {
         <div style={styles.filters}>
           <select
             value={filterClass}
-            onChange={(e) => {
-              setFilterClass(e.target.value);
-              setFilterSection('');
-            }}
+            onChange={(e) => setFilterClass(e.target.value)}
             style={styles.select}
           >
             <option value="">All Classes</option>
             {uniqueClasses.map((cls) => (
               <option key={cls} value={cls}>
                 {cls}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterSemester}
-            onChange={(e) => setFilterSemester(e.target.value)}
-            style={styles.select}
-          >
-            <option value="">All Semesters</option>
-            {uniqueSemesters.map((sem) => (
-              <option key={sem} value={sem}>
-                {sem}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterSection}
-            onChange={(e) => setFilterSection(e.target.value)}
-            style={styles.select}
-          >
-            <option value="">All Sections</option>
-            {uniqueSections.map((sec) => (
-              <option key={sec} value={sec}>
-                {sec}
               </option>
             ))}
           </select>
@@ -171,9 +138,9 @@ const PrincipalResults = () => {
                 const studentId = student?._id || result.student?._id || result.student;
                 return (
                   <tr key={result._id} style={styles.tableRow}>
-                    <td style={styles.nameCell}>{student?.name || result.student?.name || 'Unknown'}</td>
-                    <td>{student?.class || 'N/A'}</td>
-                    <td>{student?.section || 'N/A'}</td>
+                    <td style={styles.nameCell}>{student?.name || result.student?.name || '-'}</td>
+                    <td>{student?.class?.class_name || student?.class || '-'}</td>
+                    <td>{student?.section || '-'}</td>
                     <td>{result.semester}</td>
                     <td>{result.total_marks}</td>
                     <td>{result.percentage.toFixed(2)}%</td>

@@ -105,13 +105,20 @@ const StudentManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this student?')) return;
+    if (!id) {
+      setError('Invalid student');
+      return;
+    }
+    if (!window.confirm('Are you sure you want to delete this student? All marks, results, and related data will be removed.')) return;
 
+    setError('');
     try {
       await studentsAPI.delete(id);
-      fetchData();
+      setError('');
+      await fetchData();
     } catch (error) {
-      setError('Failed to delete student');
+      const message = error.response?.data?.message || error.message || 'Failed to delete student';
+      setError(message);
     }
   };
 

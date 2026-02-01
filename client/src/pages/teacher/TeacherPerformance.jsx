@@ -94,7 +94,7 @@ const TeacherPerformance = () => {
   const currentResult = results.length > 0 ? results[0] : null;
   const marksBySubject = {};
   marks.forEach((mark) => {
-    const subjectName = mark.subject?.subject_name || 'Unknown';
+    const subjectName = mark.subject?.subject_name || '-';
     if (!marksBySubject[subjectName]) {
       marksBySubject[subjectName] = [];
     }

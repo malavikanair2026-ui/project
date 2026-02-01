@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const Student = require('../models/Student');
+const Marks = require('../models/Marks');
+const Result = require('../models/Result');
+const Feedback = require('../models/Feedback');
+const Query = require('../models/Query');
+const Notification = require('../models/Notification');
 
 // Get all users
 router.get('/', async (req, res) => {
@@ -98,17 +104,43 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete user
+// Delete user (and linked student + related data if role is student)
 router.delete('/:id', async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    // If user is a student, delete the Student record and all related data first
+    if (user.role === 'student') {
+      const student = await Student.findOne({ user: user._id });
+      if (student) {
+        const studentId = student._id;
+        await Marks.deleteMany({ student: studentId });
+        await Result.deleteMany({ student: studentId });
+        await Feedback.deleteMany({ student: studentId });
+        await Query.deleteMany({ student: studentId });
+        await Notification.updateMany(
+          { recipients: studentId },
+          { $pull: { recipients: studentId } }
+        );
+        await Student.findByIdAndDelete(studentId);
+      }
+    }
+
+    await User.findByIdAndDelete(id);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to delete user' });
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      message: error.message || 'Failed to delete user',
+    });
   }
 });
 

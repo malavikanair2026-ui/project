@@ -178,7 +178,7 @@ const MarksEntry = () => {
               </option>
               {teacherSubjects.map((s, idx) => (
                 <option key={s.subject?._id || idx} value={s.subject?._id}>
-                  {s.subject?.subject_name || 'Unknown Subject'}
+                  {s.subject?.subject_name || '-'}
                 </option>
               ))}
             </select>

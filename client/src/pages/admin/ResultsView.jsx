@@ -15,7 +15,9 @@ const ResultsView = () => {
   const fetchResults = async () => {
     try {
       const response = await resultsAPI.getAll();
-      setResults(response.data);
+      // Remove details of unknown (orphaned results where student is missing)
+      const list = Array.isArray(response.data) ? response.data : [];
+      setResults(list.filter((r) => r.student?.name));
     } catch (error) {
       console.error('Failed to fetch results:', error);
       setError('Failed to load results');
@@ -87,7 +89,7 @@ const ResultsView = () => {
               results.map((result) => (
                 <tr key={result._id}>
                   <td>
-                    {result.student?.name || 'Unknown Student'}
+                    {result.student?.name || '-'}
                   </td>
                   <td>{result.semester}</td>
                   <td>{result.total_marks}</td>

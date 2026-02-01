@@ -392,7 +392,7 @@ const ClassManagement = () => {
                 <div style={styles.teacherItem}>
                   <span style={styles.teacherRole}>👨‍🏫 Class Teacher:</span>
                   <span style={styles.teacherName}>
-                    {classItem.class_teacher?.name || 'Unknown'}
+                    {classItem.class_teacher?.name || '-'}
                   </span>
                   <button
                     onClick={() => handleRemoveTeacher(classItem._id, classItem.class_teacher._id || classItem.class_teacher, 'class_teacher')}
@@ -407,7 +407,7 @@ const ClassManagement = () => {
                 <>
                   {classItem.assigned_teachers.map((teacher) => {
                     const teacherId = teacher._id || teacher;
-                    const teacherName = teacher.name || 'Unknown';
+                    const teacherName = teacher.name || '-';
                     return (
                       <div key={teacherId} style={styles.teacherItem}>
                         <span style={styles.teacherRole}>👤 Teacher:</span>
@@ -490,7 +490,7 @@ const ClassManagement = () => {
                     <li key={idx} style={styles.subjectItem}>
                       <div style={styles.subjectInfo}>
                         <strong>
-                          {subj.subject?.subject_name || 'Unknown Subject'}
+                          {subj.subject?.subject_name || '-'}
                         </strong>
                         {subj.teacher && (
                           <span style={styles.teacherName}>
@@ -697,7 +697,7 @@ const ClassManagement = () => {
                 <label>Subject</label>
                 <input
                   type="text"
-                  value={editingSubject?.subject?.subject_name || 'Unknown Subject'}
+                  value={editingSubject?.subject?.subject_name || '-'}
                   disabled
                   style={{ ...styles.input, backgroundColor: '#f5f5f5' }}
                 />

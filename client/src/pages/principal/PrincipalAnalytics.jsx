@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { resultsAPI, studentsAPI, analyticsAPI, classesAPI } from '../../services/api';
+import { usePrincipal } from '../../context/PrincipalContext';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PrincipalAnalytics = () => {
+  const { selectedSemester } = usePrincipal();
   const [activeTab, setActiveTab] = useState('overview');
-  const [semesterFilter, setSemesterFilter] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +39,7 @@ const PrincipalAnalytics = () => {
 
   useEffect(() => {
     fetchOverview();
-  }, [semesterFilter]);
+  }, [selectedSemester]);
 
   useEffect(() => {
     if (activeTab === 'class') {
@@ -48,7 +49,7 @@ const PrincipalAnalytics = () => {
     } else if (activeTab === 'rankings') {
       fetchRankings();
     }
-  }, [activeTab, semesterFilter, classFilter]);
+  }, [activeTab, selectedSemester, classFilter]);
 
   const fetchOverview = async () => {
     try {
@@ -57,7 +58,7 @@ const PrincipalAnalytics = () => {
         studentsAPI.getAll(),
       ]);
 
-      const results = resultsRes.data.filter((r) => !semesterFilter || r.semester === semesterFilter);
+      const results = resultsRes.data.filter((r) => !selectedSemester || r.semester === selectedSemester);
       const students = studentsRes.data;
 
       const passCount = results.filter((r) => r.grade !== 'F').length;
@@ -71,14 +72,15 @@ const PrincipalAnalytics = () => {
       });
 
       const topPerformers = [...results]
+        .filter((r) => r.student?.name)
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, 10)
         .map((r) => ({
-          name: r.student?.name || 'Unknown',
+          name: r.student?.name,
           percentage: r.percentage,
           grade: r.grade,
-          studentId: r.student?.student_id || 'N/A',
-          class: r.student?.class || 'N/A',
+          studentId: r.student?.student_id ?? '-',
+          class: r.student?.class ?? '-',
         }));
 
       setOverview({
@@ -100,7 +102,7 @@ const PrincipalAnalytics = () => {
 
   const fetchClassPerformance = async () => {
     try {
-      const response = await analyticsAPI.getClassPerformance(semesterFilter);
+      const response = await analyticsAPI.getClassPerformance(selectedSemester);
       setClassPerformance(response.data);
     } catch (error) {
       console.error('Failed to fetch class performance:', error);
@@ -110,7 +112,7 @@ const PrincipalAnalytics = () => {
 
   const fetchSubjectAnalysis = async () => {
     try {
-      const response = await analyticsAPI.getSubjectAnalysis(semesterFilter);
+      const response = await analyticsAPI.getSubjectAnalysis(selectedSemester);
       setSubjectAnalysis(response.data);
     } catch (error) {
       console.error('Failed to fetch subject analysis:', error);
@@ -120,7 +122,7 @@ const PrincipalAnalytics = () => {
 
   const fetchRankings = async () => {
     try {
-      const response = await analyticsAPI.getRankings(semesterFilter, classFilter || undefined);
+      const response = await analyticsAPI.getRankings(selectedSemester, classFilter || undefined);
       setRankings(response.data);
     } catch (error) {
       console.error('Failed to fetch rankings:', error);
@@ -128,14 +130,7 @@ const PrincipalAnalytics = () => {
     }
   };
 
-  // Same source as admin Class Management: semesters and classes from classesAPI
-  const getUniqueSemesters = () => {
-    const semesters = [...new Set(
-      classes.flatMap((c) => (c.semesters || []).map((s) => s.semester_name).filter(Boolean))
-    )].filter(Boolean).sort();
-    return semesters;
-  };
-
+  // Classes from same source as Class Management (classesAPI)
   const uniqueClasses = classes.map((c) => c.class_name).filter(Boolean).sort();
 
   if (loading && activeTab === 'overview') {
@@ -160,18 +155,6 @@ const PrincipalAnalytics = () => {
             {uniqueClasses.map((cls) => (
               <option key={cls} value={cls}>
                 {cls}
-              </option>
-            ))}
-          </select>
-          <select
-            value={semesterFilter}
-            onChange={(e) => setSemesterFilter(e.target.value)}
-            style={styles.select}
-          >
-            <option value="">All Semesters</option>
-            {getUniqueSemesters().map((sem) => (
-              <option key={sem} value={sem}>
-                {sem}
               </option>
             ))}
           </select>
@@ -504,7 +487,7 @@ const PrincipalAnalytics = () => {
                           {ranking.grade}
                         </span>
                       </td>
-                      <td>{ranking.sgpa?.toFixed(2) || 'N/A'}</td>
+                      <td>{ranking.sgpa != null ? ranking.sgpa.toFixed(2) : '-'}</td>
                     </tr>
                   ))}
                 </tbody>

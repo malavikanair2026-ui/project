@@ -63,6 +63,12 @@ const StaffResults = () => {
       });
     }
 
+    // Remove details of unknown (orphaned results where student is missing)
+    filtered = filtered.filter((r) => {
+      const student = students.find((s) => s._id === r.student?._id || s._id === r.student);
+      return (student?.name || r.student?.name);
+    });
+
     return filtered;
   };
 
@@ -159,9 +165,9 @@ const StaffResults = () => {
                 );
                 return (
                   <tr key={result._id} style={styles.tableRow}>
-                    <td style={styles.nameCell}>{student?.name || result.student?.name || 'Unknown'}</td>
-                    <td>{student?.class || 'N/A'}</td>
-                    <td>{student?.section || 'N/A'}</td>
+                    <td style={styles.nameCell}>{student?.name || result.student?.name || '-'}</td>
+                    <td>{student?.class?.class_name || student?.class || '-'}</td>
+                    <td>{student?.section || '-'}</td>
                     <td>{result.semester}</td>
                     <td>{result.total_marks}</td>
                     <td>{result.percentage.toFixed(2)}%</td>

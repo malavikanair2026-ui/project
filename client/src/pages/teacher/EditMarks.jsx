@@ -197,7 +197,7 @@ const EditMarks = () => {
 
                 return (
                   <tr key={mark._id}>
-                    <td>{subject?.subject_name || 'Unknown'}</td>
+                    <td>{subject?.subject_name || '-'}</td>
                     {isEditing ? (
                       <>
                         <td>

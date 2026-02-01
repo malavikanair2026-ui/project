@@ -72,13 +72,20 @@ const UserManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    if (!id) {
+      setError('Invalid user');
+      return;
+    }
+    if (!window.confirm('Are you sure you want to delete this user? If they are a student, their student record and all marks/results will also be removed.')) return;
 
+    setError('');
     try {
       await usersAPI.delete(id);
-      fetchUsers();
+      setError('');
+      await fetchUsers();
     } catch (error) {
-      setError('Failed to delete user');
+      const message = error.response?.data?.message || error.message || 'Failed to delete user';
+      setError(message);
     }
   };
 

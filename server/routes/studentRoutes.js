@@ -1,6 +1,12 @@
 const express = require('express');
 const Student = require('../models/Student');
 const Class = require('../models/Class');
+const Marks = require('../models/Marks');
+const Result = require('../models/Result');
+const Feedback = require('../models/Feedback');
+const Query = require('../models/Query');
+const Notification = require('../models/Notification');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -114,14 +120,59 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete student
+// Delete student and all related data (marks, results, feedback, queries, notifications, user)
 router.delete('/:id', async (req, res) => {
   try {
-    const student = await Student.findByIdAndDelete(req.params.id);
-    if (!student) return res.status(404).json({ message: 'Student not found' });
-    res.json({ message: 'Student deleted' });
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ message: 'Student ID is required' });
+    }
+
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const studentId = student._id;
+    const userId = student.user; // ObjectId from non-populated doc
+
+    // Delete all marks for this student
+    await Marks.deleteMany({ student: studentId });
+
+    // Delete all results for this student
+    await Result.deleteMany({ student: studentId });
+
+    // Delete all feedback for this student
+    await Feedback.deleteMany({ student: studentId });
+
+    // Delete all queries by this student
+    await Query.deleteMany({ student: studentId });
+
+    // Remove student from notification recipients
+    await Notification.updateMany(
+      { recipients: studentId },
+      { $pull: { recipients: studentId } }
+    );
+
+    // Delete the student record first
+    await Student.findByIdAndDelete(studentId);
+
+    // Delete the associated user account (optional - don't fail if user already deleted)
+    if (userId) {
+      try {
+        await User.findByIdAndDelete(userId);
+      } catch (userErr) {
+        // Student and related data already deleted; log but don't fail
+        console.warn('Could not delete user for student:', userErr.message);
+      }
+    }
+
+    res.json({ message: 'Student and all related data deleted' });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to delete student' });
+    console.error('Delete student error:', err);
+    res.status(500).json({
+      message: err.message || 'Failed to delete student',
+    });
   }
 });
 

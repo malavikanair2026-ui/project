@@ -56,13 +56,14 @@ const Analytics = () => {
       });
 
       const topPerformers = [...results]
+        .filter((r) => r.student?.name)
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, 10)
         .map((r) => ({
-          name: r.student?.name || 'Unknown',
+          name: r.student?.name,
           percentage: r.percentage,
           grade: r.grade,
-          studentId: r.student?.student_id || 'N/A',
+          studentId: r.student?.student_id ?? '-',
         }));
 
       setOverview({
@@ -391,7 +392,7 @@ const Analytics = () => {
                       </td>
                       <td style={styles.td}>{student.studentId}</td>
                       <td style={styles.td}>{student.name}</td>
-                      <td style={styles.td}>{student.class?.class_name || student.class || 'N/A'}</td>
+                      <td style={styles.td}>{student.class?.class_name || student.class || '-'}</td>
                       <td style={styles.td}>{student.section}</td>
                       <td style={styles.td}>{student.semester}</td>
                       <td style={styles.td}>{student.totalMarks}</td>

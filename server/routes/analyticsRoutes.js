@@ -18,9 +18,11 @@ router.get('/class-performance', async (req, res) => {
     const classPerformance = {};
 
     results.forEach((result) => {
+      if (!result.student) return; // Skip orphaned results (deleted student)
       const student = students.find(
         (s) => s._id.toString() === result.student?._id?.toString() || s._id.toString() === result.student?.toString()
       );
+      if (!student?.name || !student?.class) return; // Skip unknown/missing student details
       if (student?.class) {
         const className = `${student.class} ${student.section || ''}`.trim();
         if (!classPerformance[className]) {
@@ -95,6 +97,7 @@ router.get('/subject-analysis', async (req, res) => {
     const subjectAnalysis = {};
 
     marks.forEach((mark) => {
+      if (!mark.student || !mark.student?.name) return; // Skip unknown student details
       const subject = mark.subject;
       if (!subject) return;
 
@@ -125,10 +128,10 @@ router.get('/subject-analysis', async (req, res) => {
         data.failCount += 1;
       }
 
-      // Track top scorers
+      // Track top scorers (student already validated above)
       data.topScorers.push({
-        studentId: mark.student?.student_id || 'N/A',
-        studentName: mark.student?.name || 'Unknown',
+        studentId: mark.student?.student_id ?? '-',
+        studentName: mark.student?.name ?? '-',
         marks: mark.marks_obtained,
         percentage: percentage,
       });
@@ -163,24 +166,27 @@ router.get('/rankings', async (req, res) => {
     const results = await Result.find(filter).populate('student');
     const students = await Student.find();
 
-    let rankings = results.map((result) => {
-      const student = students.find(
-        (s) => s._id.toString() === result.student?._id?.toString() || s._id.toString() === result.student?.toString()
-      );
-      return {
-        rank: 0, // Will be calculated
-        studentId: student?.student_id || 'N/A',
-        name: student?.name || 'Unknown',
-        class: student?.class || 'N/A',
-        section: student?.section || '',
-        semester: result.semester,
-        totalMarks: result.total_marks,
-        percentage: result.percentage,
-        grade: result.grade,
-        sgpa: result.sgpa,
-        status: result.status,
-      };
-    });
+    let rankings = results
+      .filter((result) => result.student) // Exclude orphaned results
+      .map((result) => {
+        const student = students.find(
+          (s) => s._id.toString() === result.student?._id?.toString() || s._id.toString() === result.student?.toString()
+        );
+        return {
+          rank: 0,
+          studentId: student?.student_id ?? '-',
+          name: student?.name ?? '-',
+          class: student?.class ?? '-',
+          section: student?.section || '',
+          semester: result.semester,
+          totalMarks: result.total_marks,
+          percentage: result.percentage,
+          grade: result.grade,
+          sgpa: result.sgpa,
+          status: result.status,
+        };
+      })
+      .filter((r) => r.name && r.name !== '-'); // Remove details of unknown
 
     // Filter by class if specified
     if (className) {
@@ -218,16 +224,18 @@ router.get('/toppers', async (req, res) => {
       .sort({ percentage: -1 })
       .limit(parseInt(limit));
 
-    const toppers = results.map((result, index) => ({
-      rank: index + 1,
-      studentId: result.student?.student_id || 'N/A',
-      name: result.student?.name || 'Unknown',
-      class: result.student?.class || 'N/A',
-      section: result.student?.section || '',
-      percentage: result.percentage,
-      grade: result.grade,
-      sgpa: result.sgpa,
-    }));
+    const toppers = results
+      .filter((result) => result.student && result.student?.name) // Remove details of unknown
+      .map((result, index) => ({
+        rank: index + 1,
+        studentId: result.student?.student_id ?? '-',
+        name: result.student?.name ?? '-',
+        class: result.student?.class ?? '-',
+        section: result.student?.section || '',
+        percentage: result.percentage,
+        grade: result.grade,
+        sgpa: result.sgpa,
+      }));
 
     res.json(toppers);
   } catch (error) {

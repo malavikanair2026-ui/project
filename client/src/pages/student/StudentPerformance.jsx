@@ -49,7 +49,7 @@ const StudentPerformance = () => {
     // Subject-wise performance
     const subjectPerformance = {};
     marks.forEach((mark) => {
-      const subjectName = mark.subject?.subject_name || 'Unknown';
+      const subjectName = mark.subject?.subject_name || '-';
       if (!subjectPerformance[subjectName]) {
         subjectPerformance[subjectName] = {
           total: 0,

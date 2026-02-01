@@ -118,7 +118,7 @@ const StudentFeedback = () => {
                   <div style={styles.feedbackHeader}>
                     <div>
                       <strong style={styles.teacherName}>
-                        {feedback.teacher?.name || 'Unknown Teacher'}
+                        {feedback.teacher?.name || '-'}
                       </strong>
                       <span
                         style={{

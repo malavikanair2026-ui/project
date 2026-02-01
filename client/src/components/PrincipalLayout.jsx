@@ -1,12 +1,22 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { PrincipalProvider, usePrincipal } from '../context/PrincipalContext';
 
-const PrincipalLayout = ({ children }) => {
+const PrincipalLayoutInner = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const {
+    uniqueSemesters,
+    uniqueSections,
+    selectedSemester,
+    selectedSection,
+    setSelectedSemester,
+    setSelectedSection,
+    loading: contextLoading,
+  } = usePrincipal();
 
   const menuItems = [
     { path: '/principal/dashboard', label: 'Dashboard', icon: '📊' },
@@ -54,9 +64,33 @@ const PrincipalLayout = ({ children }) => {
 
       {/* Main Content */}
       <div style={styles.mainContent}>
-        {/* Header */}
+        {/* Header - Section & Semester same source as Class Management */}
         <header style={styles.header}>
           <h1 style={styles.headerTitle}>Principal Dashboard</h1>
+          <div style={styles.headerFilters}>
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              style={styles.select}
+              disabled={contextLoading}
+            >
+              <option value="">All Sections</option>
+              {uniqueSections.map((section) => (
+                <option key={section} value={section}>{section}</option>
+              ))}
+            </select>
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              style={styles.select}
+              disabled={contextLoading}
+            >
+              <option value="">All Semesters</option>
+              {uniqueSemesters.map((sem) => (
+                <option key={sem} value={sem}>{sem}</option>
+              ))}
+            </select>
+          </div>
           <div style={styles.headerRight}>
             <span style={styles.userName}>{user?.name}</span>
             <button onClick={handleLogout} style={styles.logoutBtn}>
@@ -71,6 +105,12 @@ const PrincipalLayout = ({ children }) => {
     </div>
   );
 };
+
+const PrincipalLayout = ({ children }) => (
+  <PrincipalProvider>
+    <PrincipalLayoutInner>{children}</PrincipalLayoutInner>
+  </PrincipalProvider>
+);
 
 const styles = {
   container: {
@@ -139,6 +179,20 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: '20px',
+    flexWrap: 'wrap',
+  },
+  headerFilters: {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center',
+  },
+  select: {
+    padding: '8px 12px',
+    borderRadius: '4px',
+    border: '1px solid #ddd',
+    fontSize: '14px',
+    minWidth: '120px',
   },
   headerTitle: {
     margin: 0,
