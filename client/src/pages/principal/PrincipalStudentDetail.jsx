@@ -58,7 +58,7 @@ const PrincipalStudentDetail = () => {
   // Group marks by subject
   const marksBySubject = {};
   marks.forEach((mark) => {
-    const subjectName = mark.subject?.name || '-';
+    const subjectName = mark.subject?.subject_name || '-';
     if (!marksBySubject[subjectName]) {
       marksBySubject[subjectName] = [];
     }
