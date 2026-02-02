@@ -11,7 +11,7 @@ const TeacherAnalytics = () => {
   const [students, setStudents] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
 
   useEffect(() => {
@@ -19,10 +19,16 @@ const TeacherAnalytics = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedClass) {
-      fetchClassData();
+    if (user?._id) fetchData();
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (selectedSection) {
+      fetchSectionData();
+    } else {
+      setResults([]);
     }
-  }, [selectedClass, selectedSemester]);
+  }, [selectedSection, selectedSemester, classes, students]);
 
   const fetchData = async () => {
     try {
@@ -31,8 +37,8 @@ const TeacherAnalytics = () => {
         studentsAPI.getAll(),
       ]);
 
-      setClasses(classesRes.data);
-      setStudents(studentsRes.data);
+      setClasses(Array.isArray(classesRes?.data) ? classesRes.data : []);
+      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load data', 'error');
@@ -41,32 +47,37 @@ const TeacherAnalytics = () => {
     }
   };
 
-  const fetchClassData = async () => {
+  const getSectionValue = (s) => {
+    const v = s?.section;
+    const str = v === null || v === undefined ? '' : String(v).trim();
+    return str || 'N/A';
+  };
+
+  const fetchSectionData = async () => {
     try {
       const allResults = await resultsAPI.getAll();
-      let filteredResults = allResults.data;
+      let filteredResults = Array.isArray(allResults?.data) ? allResults.data : [];
 
-      if (selectedClass) {
-        const classObj = classes.find((c) => c._id === selectedClass);
-        if (classObj) {
-          filteredResults = filteredResults.filter((r) => {
-            const student = students.find((s) => s._id === (r.student?._id || r.student));
-            const studentClassId = student?.class?._id || student?.class;
-            return String(studentClassId) === String(classObj._id);
-          });
-        }
+      if (selectedSection && filteredResults.length > 0) {
+        const sectionStr = String(selectedSection);
+        filteredResults = filteredResults.filter((r) => {
+          const studentId = r.student?._id ?? r.student;
+          const student = students.find((s) => String(s._id) === String(studentId));
+          const studentSection = getSectionValue(student ?? r.student ?? {});
+          return studentSection === sectionStr;
+        });
       }
 
       if (selectedSemester) {
         filteredResults = filteredResults.filter((r) => r.semester === selectedSemester);
       }
 
-      filteredResults = filteredResults.filter((r) => r.student?.name);
+      filteredResults = filteredResults.filter((r) => r.grade != null || r.percentage != null);
 
       setResults(filteredResults);
     } catch (error) {
-      console.error('Failed to fetch class data:', error);
-      showToast('Failed to load class performance', 'error');
+      console.error('Failed to fetch section data:', error);
+      showToast('Failed to load section performance', 'error');
     }
   };
 
@@ -83,24 +94,36 @@ const TeacherAnalytics = () => {
     return <LoadingSpinner />;
   }
 
-  const teacherClasses = classes.filter((cls) => {
-    return cls.subjects?.some(
-      (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
-    );
+  const teacherClasses = classes.filter((cls) =>
+    cls.subjects?.some((s) => String(s.teacher?._id || s.teacher) === String(user?._id))
+  );
+
+  const teacherStudents = students.filter((s) => {
+    const studentClassId = s.class?._id ?? s.class;
+    return teacherClasses.some((cls) => String(cls._id) === String(studentClassId));
   });
 
-  const classObj = classes.find((c) => c._id === selectedClass);
-  const classStudents = classObj
-    ? students.filter((s) => {
-        const studentClassId = s.class?._id || s.class;
-        return String(studentClassId) === String(classObj._id);
-      })
+  const sectionSet = new Set(
+    (teacherStudents.length > 0 ? teacherStudents : students).map((s) => {
+      const v = s.section;
+      const str = v === null || v === undefined ? '' : String(v).trim();
+      return str || 'N/A';
+    })
+  );
+  const sections = [...sectionSet].sort((a, b) =>
+    a === 'N/A' ? 1 : b === 'N/A' ? -1 : a.localeCompare(b)
+  );
+
+  const sectionStudents = selectedSection
+    ? (teacherStudents.length > 0 ? teacherStudents : students).filter(
+        (s) => getSectionValue(s) === selectedSection
+      )
     : [];
 
   const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
 
-  // Calculate statistics
-  const totalStudents = classStudents.length;
+  // Calculate statistics (by section)
+  const totalStudents = sectionStudents.length;
   const studentsWithResults = results.length;
   const passCount = results.filter((r) => r.grade !== 'F').length;
   const failCount = results.filter((r) => r.grade === 'F').length;
@@ -114,21 +137,20 @@ const TeacherAnalytics = () => {
     gradeDistribution[r.grade] = (gradeDistribution[r.grade] || 0) + 1;
   });
 
-  // Top performers
+  // Top performers (use result.student if populated, else match from students list)
   const topPerformers = [...results]
-    .filter((r) => {
-      const student = students.find((s) => s._id === (r.student?._id || r.student));
-      return student?.name;
-    })
-    .sort((a, b) => b.percentage - a.percentage)
+    .filter((r) => r.grade != null || r.percentage != null)
+    .sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0))
     .slice(0, 10)
     .map((r) => {
-      const student = students.find((s) => s._id === (r.student?._id || r.student));
+      const studentId = r.student?._id ?? r.student;
+      const student = students.find((s) => String(s._id) === String(studentId));
+      const name = student?.name ?? r.student?.name ?? student?.user?.name ?? 'Student';
       return {
-        name: student?.name,
+        name,
         percentage: r.percentage,
         grade: r.grade,
-        studentId: student?.student_id ?? '-',
+        studentId: student?.student_id ?? r.student?.student_id ?? '-',
       };
     });
 
@@ -138,14 +160,14 @@ const TeacherAnalytics = () => {
 
       <div style={styles.filters}>
         <select
-          value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
+          value={selectedSection}
+          onChange={(e) => setSelectedSection(e.target.value)}
           style={styles.select}
         >
-          <option value="">Select Class</option>
-          {teacherClasses.map((cls) => (
-            <option key={cls._id} value={cls._id}>
-              {cls.class_name}
+          <option value="">Select Section</option>
+          {sections.map((sec) => (
+            <option key={sec} value={sec}>
+              {sec}
             </option>
           ))}
         </select>
@@ -154,7 +176,7 @@ const TeacherAnalytics = () => {
           value={selectedSemester}
           onChange={(e) => setSelectedSemester(e.target.value)}
           style={styles.select}
-          disabled={!selectedClass}
+          disabled={!selectedSection}
         >
           <option value="">All Semesters</option>
           {uniqueSemesters.map((sem) => (
@@ -165,7 +187,7 @@ const TeacherAnalytics = () => {
         </select>
       </div>
 
-      {selectedClass ? (
+      {selectedSection ? (
         <div>
           {/* Statistics */}
           <div style={styles.statsGrid}>
@@ -282,7 +304,7 @@ const TeacherAnalytics = () => {
         </div>
       ) : (
         <div style={styles.noData}>
-          Please select a class to view analytics
+          Please select a section to view analytics
         </div>
       )}
     </div>
