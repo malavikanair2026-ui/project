@@ -12,7 +12,7 @@ const MarksEntry = () => {
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
-    section: '',
+    classId: '',
     studentId: '',
     subjectId: '',
     marks_obtained: '',
@@ -41,12 +41,13 @@ const MarksEntry = () => {
       setClasses(classesRes.data);
       setStudents(studentsRes.data);
       
-      // If studentId is in URL, try to find and set the section
+      // If studentId is in URL, try to find and set the class
       const studentIdParam = searchParams.get('studentId');
       if (studentIdParam) {
         const student = studentsRes.data.find((s) => s._id === studentIdParam);
-        if (student?.section) {
-          setFormData((prev) => ({ ...prev, section: student.section }));
+        const studentClassId = student?.class?._id || student?.class;
+        if (studentClassId) {
+          setFormData((prev) => ({ ...prev, classId: studentClassId }));
         }
       }
     } catch (err) {
@@ -69,8 +70,8 @@ const MarksEntry = () => {
     setSubmitting(true);
 
     try {
-      if (!formData.section || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
-        showToast('Section, Student, Subject, and Marks are required', 'error');
+      if (!formData.classId || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
+        showToast('Class, Student, Subject, and Marks are required', 'error');
         return;
       }
 
@@ -103,29 +104,21 @@ const MarksEntry = () => {
     }
   };
 
-  // Sections: all unique section values from students (for dropdown listing)
-  const sections = [...new Set(
-    students.map((stu) => stu.section).filter(Boolean)
-  )].sort();
+  // Selected class (teacher's assigned class)
+  const selectedClass = classes.find((c) => String(c._id) === String(formData.classId));
 
-  // All subjects the teacher teaches (from all their classes), deduplicated
-  const teacherSubjectsRaw = classes.flatMap((cls) =>
-    (cls.subjects || []).filter(
-      (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
-    )
-  );
-  const seenSubjectIds = new Set();
-  const teacherSubjects = teacherSubjectsRaw.filter((s) => {
-    const id = s.subject?._id;
-    if (!id || seenSubjectIds.has(String(id))) return false;
-    seenSubjectIds.add(String(id));
-    return true;
-  });
+  // Subjects the teacher teaches in the selected class
+  const teacherSubjects =
+    selectedClass && selectedClass.subjects
+      ? selectedClass.subjects.filter(
+          (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
+        )
+      : [];
 
-  // Students in the selected section only (list by respective section)
-  const sectionStudents =
-    formData.section && students.length > 0
-      ? students.filter((stu) => (stu.section || '') === formData.section)
+  // Students in the selected (assigned) class
+  const classStudents =
+    formData.classId && students.length > 0
+      ? students.filter((stu) => String(stu.class?._id || stu.class) === String(formData.classId))
       : [];
 
   if (loading) return <LoadingSpinner />;
@@ -137,10 +130,10 @@ const MarksEntry = () => {
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formRow}>
           <div style={styles.formGroup}>
-            <label>Section</label>
+            <label>Class</label>
             <select
-              name="section"
-              value={formData.section}
+              name="classId"
+              value={formData.classId}
               onChange={(e) => {
                 handleChange(e);
                 setFormData((prev) => ({
@@ -152,10 +145,10 @@ const MarksEntry = () => {
               required
               style={styles.input}
             >
-              <option value="">Select section</option>
-              {sections.map((sec) => (
-                <option key={sec} value={sec}>
-                  {sec}
+              <option value="">Select class</option>
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.class_name} {cls.class_id ? `(ID: ${cls.class_id})` : ''}
                 </option>
               ))}
             </select>
@@ -168,9 +161,12 @@ const MarksEntry = () => {
               value={formData.subjectId}
               onChange={handleChange}
               required
+              disabled={!selectedClass}
               style={styles.input}
             >
-              <option value="">Select subject</option>
+              <option value="">
+                {selectedClass ? 'Select subject' : 'Select class first'}
+              </option>
               {teacherSubjects.map((s, idx) => (
                 <option key={s.subject?._id || idx} value={s.subject?._id}>
                   {s.subject?.subject_name || '-'}
@@ -188,15 +184,15 @@ const MarksEntry = () => {
               value={formData.studentId}
               onChange={handleChange}
               required
-              disabled={!formData.section}
+              disabled={!formData.classId}
               style={styles.input}
             >
               <option value="">
-                {formData.section ? 'Select student' : 'Select section first'}
+                {formData.classId ? 'Select student' : 'Select class first'}
               </option>
-              {sectionStudents.map((stu) => (
+              {classStudents.map((stu) => (
                 <option key={stu._id} value={stu._id}>
-                  {stu.name || stu.user?.name || 'Student'} {stu.class?.class_name ? `(${stu.class.class_name})` : ''} — ID: {stu.student_id ?? stu._id}
+                  {stu.name || stu.user?.name || 'Student'} {stu.section ? `(${stu.section})` : ''} — ID: {stu.student_id ?? stu._id}
                 </option>
               ))}
             </select>
