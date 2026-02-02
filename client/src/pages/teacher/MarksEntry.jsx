@@ -11,6 +11,8 @@ const MarksEntry = () => {
   const { showToast } = useToast();
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
+  const [studentsInClass, setStudentsInClass] = useState([]);
+  const [loadingStudentsInClass, setLoadingStudentsInClass] = useState(false);
   const [formData, setFormData] = useState({
     classId: '',
     studentId: '',
@@ -32,22 +34,48 @@ const MarksEntry = () => {
     }
   }, [searchParams]);
 
+  // Fetch students for selected class so dropdown lists names correctly
+  useEffect(() => {
+    const classId = formData.classId ? String(formData.classId).trim() : '';
+    if (!classId) {
+      setStudentsInClass([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingStudentsInClass(true);
+    studentsAPI
+      .getAll({ class: classId })
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res.data) ? res.data : [];
+        setStudentsInClass(list);
+      })
+      .catch(() => {
+        if (!cancelled) setStudentsInClass([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStudentsInClass(false);
+      });
+    return () => { cancelled = true; };
+  }, [formData.classId]);
+
   const fetchData = async () => {
     try {
       const [classesRes, studentsRes] = await Promise.all([
         classesAPI.getAll({ teacher: user?._id }),
         studentsAPI.getAll(),
       ]);
-      setClasses(classesRes.data);
-      setStudents(studentsRes.data);
-      
+      setClasses(Array.isArray(classesRes.data) ? classesRes.data : []);
+      const studentsList = Array.isArray(studentsRes.data) ? studentsRes.data : [];
+      setStudents(studentsList);
+
       // If studentId is in URL, try to find and set the class
       const studentIdParam = searchParams.get('studentId');
       if (studentIdParam) {
-        const student = studentsRes.data.find((s) => s._id === studentIdParam);
+        const student = studentsList.find((s) => s && s._id === studentIdParam);
         const studentClassId = student?.class?._id || student?.class;
         if (studentClassId) {
-          setFormData((prev) => ({ ...prev, classId: studentClassId }));
+          setFormData((prev) => ({ ...prev, classId: String(studentClassId) }));
         }
       }
     } catch (err) {
@@ -115,11 +143,27 @@ const MarksEntry = () => {
         )
       : [];
 
-  // Students in the selected (assigned) class
-  const classStudents =
-    formData.classId && students.length > 0
-      ? students.filter((stu) => String(stu.class?._id || stu.class) === String(formData.classId))
+  // Students in the selected class (from API when class is selected)
+  const classStudents = Array.isArray(studentsInClass) ? studentsInClass : [];
+
+  // Students where section equals class (section matches class_name or class_id of selected class)
+  const studentsWhereSectionEqualsClass =
+    selectedClass && classStudents.length > 0
+      ? classStudents.filter((stu) => {
+          const sec = (stu.section || '').trim();
+          const className = (selectedClass.class_name || '').trim();
+          const classIdStr = String(selectedClass.class_id ?? '');
+          return sec === className || sec === classIdStr;
+        })
       : [];
+
+  // Always show a visible name in dropdown (API may use name or user.name)
+  const getStudentLabel = (stu) => {
+    const name = (stu && (stu.name ?? stu.user?.name)) ? String(stu.name ?? stu.user.name).trim() : 'Student';
+    const section = stu?.section ? ` (${stu.section})` : '';
+    const id = stu?.student_id ?? stu?._id ?? '';
+    return `${name}${section} — ID: ${id}`;
+  };
 
   if (loading) return <LoadingSpinner />;
 
@@ -147,7 +191,7 @@ const MarksEntry = () => {
             >
               <option value="">Select class</option>
               {classes.map((cls) => (
-                <option key={cls._id} value={cls._id}>
+                <option key={cls._id} value={cls._id != null ? String(cls._id) : ''}>
                   {cls.class_name} {cls.class_id ? `(ID: ${cls.class_id})` : ''}
                 </option>
               ))}
@@ -184,15 +228,15 @@ const MarksEntry = () => {
               value={formData.studentId}
               onChange={handleChange}
               required
-              disabled={!formData.classId}
+              disabled={!formData.classId || loadingStudentsInClass}
               style={styles.input}
             >
               <option value="">
-                {formData.classId ? 'Select student' : 'Select class first'}
+                {loadingStudentsInClass ? 'Loading students...' : formData.classId ? 'Select student' : 'Select class first'}
               </option>
-              {classStudents.map((stu) => (
-                <option key={stu._id} value={stu._id}>
-                  {stu.name || stu.user?.name || 'Student'} {stu.section ? `(${stu.section})` : ''} — ID: {stu.student_id ?? stu._id}
+              {studentsWhereSectionEqualsClass.map((stu) => (
+                <option key={stu._id} value={stu._id != null ? String(stu._id) : ''}>
+                  {getStudentLabel(stu)}
                 </option>
               ))}
             </select>
