@@ -40,7 +40,7 @@ const StudentManagement = () => {
       // Expand all classes by default
       const allClassNames = [...new Set(
         studentsRes.data
-          .map(s => s.class?.class_name || s.class?._id || 'Unassigned')
+          .map(s => s.class?.class_name || s.class?._id || 'CS')
           .filter(Boolean)
       )];
       setExpandedClasses(new Set(allClassNames));
@@ -162,7 +162,7 @@ const StudentManagement = () => {
 
   // Group students by class
   const groupedStudents = filteredStudents.reduce((acc, student) => {
-    const className = student.class?.class_name || student.class?._id || 'Unassigned';
+    const className = student.class?.class_name || student.class?._id || 'CS';
     if (!acc[className]) {
       acc[className] = [];
     }
@@ -226,8 +226,8 @@ const StudentManagement = () => {
         >
           <option value="all">All Classes</option>
           {allClassNames.map((className) => {
-            const displayName = className === 'Unassigned' 
-              ? 'Unassigned' 
+            const displayName = className === 'CS' 
+              ? 'CS' 
               : (classes.find(c => c._id === className || c.class_name === className)?.class_name || className);
             return (
               <option key={className} value={className}>
@@ -283,8 +283,8 @@ const StudentManagement = () => {
             const isExpanded = expandedClasses.has(className);
             
             // Get class name for display
-            const displayClassName = className === 'Unassigned' 
-              ? 'Unassigned' 
+            const displayClassName = className === 'CS' 
+              ? 'CS' 
               : (classes.find(c => c._id === className || c.class_name === className)?.class_name || className);
             
             return (
