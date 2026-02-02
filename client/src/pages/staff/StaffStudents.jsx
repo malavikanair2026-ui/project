@@ -69,7 +69,7 @@ const StaffStudents = () => {
   const groupStudentsByClass = (studentList) => {
     const grouped = {};
     studentList.forEach((student) => {
-      const className = student.class?.class_name || student.class || 'Unassigned';
+      const className = student.class?.class_name || student.class || 'CS';
       if (!grouped[className]) {
         grouped[className] = [];
       }
