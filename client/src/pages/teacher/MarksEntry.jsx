@@ -12,7 +12,7 @@ const MarksEntry = () => {
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
-    classId: '',
+    section: '',
     studentId: '',
     subjectId: '',
     marks_obtained: '',
@@ -41,18 +41,12 @@ const MarksEntry = () => {
       setClasses(classesRes.data);
       setStudents(studentsRes.data);
       
-      // If studentId is in URL, try to find and set the class
+      // If studentId is in URL, try to find and set the section
       const studentIdParam = searchParams.get('studentId');
       if (studentIdParam) {
         const student = studentsRes.data.find((s) => s._id === studentIdParam);
-        if (student) {
-          const studentClassId = student.class?._id || student.class;
-          const classObj = classesRes.data.find((c) => 
-            c._id === studentClassId || c.class_name === student.class
-          );
-          if (classObj) {
-            setFormData((prev) => ({ ...prev, classId: classObj._id }));
-          }
+        if (student?.section) {
+          setFormData((prev) => ({ ...prev, section: student.section }));
         }
       }
     } catch (err) {
@@ -68,8 +62,6 @@ const MarksEntry = () => {
       ...formData,
       [e.target.name]: e.target.name === 'marks_obtained' ? Number(e.target.value) : e.target.value,
     });
-    setError('');
-    setMessage('');
   };
 
   const handleSubmit = async (e) => {
@@ -77,8 +69,8 @@ const MarksEntry = () => {
     setSubmitting(true);
 
     try {
-      if (!formData.classId || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
-        showToast('Class, Student, Subject, and Marks are required', 'error');
+      if (!formData.section || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
+        showToast('Section, Student, Subject, and Marks are required', 'error');
         return;
       }
 
@@ -111,22 +103,29 @@ const MarksEntry = () => {
     }
   };
 
-  // Derived data based on selected class and teacher assignments
-  const selectedClass = classes.find((cls) => cls._id === formData.classId);
+  // Sections: all unique section values from students (for dropdown listing)
+  const sections = [...new Set(
+    students.map((stu) => stu.section).filter(Boolean)
+  )].sort();
 
-  const teacherSubjects =
-    selectedClass && selectedClass.subjects
-      ? selectedClass.subjects.filter(
-          (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
-        )
-      : [];
+  // All subjects the teacher teaches (from all their classes), deduplicated
+  const teacherSubjectsRaw = classes.flatMap((cls) =>
+    (cls.subjects || []).filter(
+      (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
+    )
+  );
+  const seenSubjectIds = new Set();
+  const teacherSubjects = teacherSubjectsRaw.filter((s) => {
+    const id = s.subject?._id;
+    if (!id || seenSubjectIds.has(String(id))) return false;
+    seenSubjectIds.add(String(id));
+    return true;
+  });
 
-  const classStudents =
-    selectedClass && students.length > 0
-      ? students.filter((stu) => {
-          const studentClassId = stu.class?._id || stu.class;
-          return String(studentClassId) === String(selectedClass._id);
-        })
+  // Students in the selected section only (list by respective section)
+  const sectionStudents =
+    formData.section && students.length > 0
+      ? students.filter((stu) => (stu.section || '') === formData.section)
       : [];
 
   if (loading) return <LoadingSpinner />;
@@ -138,12 +137,11 @@ const MarksEntry = () => {
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formRow}>
           <div style={styles.formGroup}>
-            <label>Class</label>
+            <label>Section</label>
             <select
-              name="classId"
-              value={formData.classId}
+              name="section"
+              value={formData.section}
               onChange={(e) => {
-                // Reset dependent fields when class changes
                 handleChange(e);
                 setFormData((prev) => ({
                   ...prev,
@@ -154,10 +152,10 @@ const MarksEntry = () => {
               required
               style={styles.input}
             >
-              <option value="">Select class</option>
-              {classes.map((cls) => (
-                <option key={cls._id} value={cls._id}>
-                  {cls.class_name} (ID: {cls.class_id})
+              <option value="">Select section</option>
+              {sections.map((sec) => (
+                <option key={sec} value={sec}>
+                  {sec}
                 </option>
               ))}
             </select>
@@ -170,12 +168,9 @@ const MarksEntry = () => {
               value={formData.subjectId}
               onChange={handleChange}
               required
-              disabled={!selectedClass}
               style={styles.input}
             >
-              <option value="">
-                {selectedClass ? 'Select subject' : 'Select class first'}
-              </option>
+              <option value="">Select subject</option>
               {teacherSubjects.map((s, idx) => (
                 <option key={s.subject?._id || idx} value={s.subject?._id}>
                   {s.subject?.subject_name || '-'}
@@ -193,15 +188,15 @@ const MarksEntry = () => {
               value={formData.studentId}
               onChange={handleChange}
               required
-              disabled={!selectedClass}
+              disabled={!formData.section}
               style={styles.input}
             >
               <option value="">
-                {selectedClass ? 'Select student' : 'Select class first'}
+                {formData.section ? 'Select student' : 'Select section first'}
               </option>
-              {classStudents.map((stu) => (
+              {sectionStudents.map((stu) => (
                 <option key={stu._id} value={stu._id}>
-                  {stu.name} - {stu.class} {stu.section} (ID: {stu.student_id})
+                  {stu.name || stu.user?.name || 'Student'} {stu.class?.class_name ? `(${stu.class.class_name})` : ''} — ID: {stu.student_id ?? stu._id}
                 </option>
               ))}
             </select>
