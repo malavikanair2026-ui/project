@@ -15,7 +15,7 @@ const TeacherPerformance = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState('');
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
 
   useEffect(() => {
@@ -26,6 +26,11 @@ const TeacherPerformance = () => {
     }
   }, [searchParams]);
 
+  // Refetch when user is available so teacher's classes and students load correctly
+  useEffect(() => {
+    if (user?._id) fetchData();
+  }, [user?._id]);
+
   const fetchData = async () => {
     try {
       const [classesRes, studentsRes] = await Promise.all([
@@ -33,8 +38,8 @@ const TeacherPerformance = () => {
         studentsAPI.getAll(),
       ]);
 
-      setClasses(classesRes.data);
-      setStudents(studentsRes.data);
+      setClasses(Array.isArray(classesRes?.data) ? classesRes.data : []);
+      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load data', 'error');
@@ -84,11 +89,29 @@ const TeacherPerformance = () => {
     );
   });
 
-  const classStudents = selectedClass
-    ? students.filter((s) => {
-        const studentClassId = s.class?._id || s.class;
-        return String(studentClassId) === String(selectedClass);
-      })
+  // Students in teacher's classes (for section list and filtering)
+  const teacherStudents = students.filter((s) => {
+    const studentClassId = s.class?._id || s.class;
+    return teacherClasses.some((cls) => String(cls._id) === String(studentClassId));
+  });
+
+  // Unique sections: from teacher's students first; fallback to all students so dropdown always lists sections
+  const getSectionValue = (s) => {
+    const v = s.section;
+    const str = v === null || v === undefined ? '' : String(v).trim();
+    return str || 'N/A';
+  };
+  const sectionSet = new Set(
+    (teacherStudents.length > 0 ? teacherStudents : students).map(getSectionValue)
+  );
+  const sections = [...sectionSet].sort((a, b) =>
+    a === 'N/A' ? 1 : b === 'N/A' ? -1 : a.localeCompare(b)
+  );
+
+  const sectionStudents = selectedSection
+    ? (teacherStudents.length > 0 ? teacherStudents : students).filter(
+        (s) => getSectionValue(s) === selectedSection
+      )
     : [];
 
   const currentResult = results.length > 0 ? results[0] : null;
@@ -107,17 +130,17 @@ const TeacherPerformance = () => {
 
       <div style={styles.filters}>
         <select
-          value={selectedClass}
+          value={selectedSection}
           onChange={(e) => {
-            setSelectedClass(e.target.value);
+            setSelectedSection(e.target.value);
             setSelectedStudent('');
           }}
           style={styles.select}
         >
-          <option value="">Select Class</option>
-          {teacherClasses.map((cls) => (
-            <option key={cls._id} value={cls._id}>
-              {cls.class_name}
+          <option value="">Select Section</option>
+          {sections.map((sec) => (
+            <option key={sec} value={sec}>
+              {sec}
             </option>
           ))}
         </select>
@@ -126,12 +149,14 @@ const TeacherPerformance = () => {
           value={selectedStudent}
           onChange={(e) => setSelectedStudent(e.target.value)}
           style={styles.select}
-          disabled={!selectedClass}
+          disabled={!selectedSection}
         >
-          <option value="">Select Student</option>
-          {classStudents.map((student) => (
+          <option value="">
+            {selectedSection ? 'Select Student' : 'Select section first'}
+          </option>
+          {sectionStudents.map((student) => (
             <option key={student._id} value={student._id}>
-              {student.name} - {student.student_id}
+              {student.name ?? student.user?.name ?? student.user?.email ?? 'Student'} ({student.section || '-'}) - {student.student_id}
             </option>
           ))}
         </select>

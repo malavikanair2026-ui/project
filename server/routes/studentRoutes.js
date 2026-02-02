@@ -43,9 +43,11 @@ router.get('/', async (req, res) => {
     }
 
     const students = await Student.find(query)
+      .select('name student_id class section user')
       .populate('class', 'class_name')
       .populate('user', 'name email')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(students);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch students' });

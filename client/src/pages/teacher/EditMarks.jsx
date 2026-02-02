@@ -35,9 +35,10 @@ const EditMarks = () => {
         subjectsAPI.getAll(),
       ]);
 
-      setClasses(classesRes.data);
-      setStudents(studentsRes.data);
-      setSubjects(subjectsRes.data);
+      setClasses(Array.isArray(classesRes?.data) ? classesRes.data : []);
+      setSubjects(Array.isArray(subjectsRes?.data) ? subjectsRes.data : []);
+      const studentList = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
+      setStudents(studentList);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load data', 'error');
@@ -45,6 +46,11 @@ const EditMarks = () => {
       setLoading(false);
     }
   };
+
+  // Refetch when user is available so teacher's classes load correctly
+  useEffect(() => {
+    if (user?._id) fetchData();
+  }, [user?._id]);
 
   useEffect(() => {
     if (filterStudent) {
@@ -121,6 +127,21 @@ const EditMarks = () => {
     );
   });
 
+  // All students for dropdown, sorted by name; label: "Name (Section)"
+  const allStudentsSorted = [...students].sort((a, b) => {
+    const nameA = (a?.name ?? a?.user?.name ?? '').toString().toLowerCase();
+    const nameB = (b?.name ?? b?.user?.name ?? '').toString().toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+  const getStudentLabel = (student) => {
+    const name = (student?.name ?? student?.user?.name ?? student?.user?.email ?? '')
+      .toString()
+      .trim();
+    const displayName = name || `Student (ID: ${student?.student_id ?? student?._id ?? ''})`;
+    const section = (student?.section ?? '').toString().trim() || '-';
+    return `${displayName} (${section})`;
+  };
+
   return (
     <div>
       <h2 style={styles.title}>Edit Marks</h2>
@@ -145,19 +166,11 @@ const EditMarks = () => {
           style={styles.select}
         >
           <option value="">Select Student</option>
-          {students
-            .filter((s) => {
-              if (filterClass) {
-                const studentClassId = s.class?._id || s.class;
-                return String(studentClassId) === String(filterClass);
-              }
-              return true;
-            })
-            .map((student) => (
-              <option key={student._id} value={student._id}>
-                {student.name} - {student.class?.class_name || student.class || 'CS'} {student.section} (ID: {student.student_id})
-              </option>
-            ))}
+          {allStudentsSorted.map((student) => (
+            <option key={student._id} value={student._id}>
+              {getStudentLabel(student)}
+            </option>
+          ))}
         </select>
 
         <input
