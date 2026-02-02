@@ -138,7 +138,7 @@ const TeacherFeedback = () => {
                 <option value="">Select Student</option>
                 {studentsForDropdown.map((student) => (
                   <option key={student._id} value={student._id}>
-                    {student.name} - {student.class?.class_name || student.class || 'N/A'} {student.section} (ID: {student.student_id})
+                    {student.name} - {student.class?.class_name || student.class || 'CS'} {student.section} (ID: {student.student_id})
                   </option>
                 ))}
               </select>
@@ -190,7 +190,7 @@ const TeacherFeedback = () => {
             <option value="">Select Student to View Feedbacks</option>
             {studentsForDropdown.map((student) => (
               <option key={student._id} value={student._id}>
-                {student.name} - {student.class?.class_name || student.class || 'N/A'} {student.section} (ID: {student.student_id})
+                {student.name} - {student.class?.class_name || student.class || 'CS'} {student.section} (ID: {student.student_id})
               </option>
             ))}
           </select>

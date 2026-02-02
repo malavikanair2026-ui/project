@@ -189,7 +189,7 @@ const TeacherStudents = () => {
                 <tr key={student._id}>
                   <td>{student.student_id}</td>
                   <td style={styles.nameCell}>{student.name}</td>
-                  <td>{student.class?.class_name || student.class || 'N/A'}</td>
+                  <td>{student.class?.class_name || student.class || 'CS'}</td>
                   <td>{student.section || 'N/A'}</td>
                   <td>
                     <div style={styles.actionButtons}>

@@ -153,7 +153,7 @@ const TeacherPerformance = () => {
             <div style={styles.studentInfo}>
               <span>ID: {student.student_id}</span>
               <span>•</span>
-              <span>Class: {student.class?.class_name || student.class || 'N/A'}</span>
+              <span>Class: {student.class?.class_name || student.class || 'CS'}</span>
               <span>•</span>
               <span>Section: {student.section || 'N/A'}</span>
             </div>
