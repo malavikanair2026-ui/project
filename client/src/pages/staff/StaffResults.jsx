@@ -22,11 +22,12 @@ const StaffResults = () => {
         resultsAPI.getAll(),
         studentsAPI.getAll(),
       ]);
-
-      setResults(resultsRes.data);
-      setStudents(studentsRes.data);
+      setResults(Array.isArray(resultsRes?.data) ? resultsRes.data : []);
+      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      setResults([]);
+      setStudents([]);
     } finally {
       setLoading(false);
     }

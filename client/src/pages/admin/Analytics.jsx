@@ -41,11 +41,11 @@ const Analytics = () => {
         resultsAPI.getAll(),
         studentsAPI.getAll(),
       ]);
-
-      const results = resultsRes.data
+      const resultsList = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
+      const results = resultsList
         .filter((r) => !semesterFilter || r.semester === semesterFilter)
         .filter((r) => r.student?.name);
-      const students = studentsRes.data;
+      const students = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
 
       const passCount = results.filter((r) => r.grade !== 'F').length;
       const failCount = results.filter((r) => r.grade === 'F').length;

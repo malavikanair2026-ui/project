@@ -14,7 +14,7 @@ const EditMarks = () => {
   const [marks, setMarks] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterClass, setFilterClass] = useState('');
+  const [filterSection, setFilterSection] = useState('');
   const [filterStudent, setFilterStudent] = useState('');
   const [filterSemester, setFilterSemester] = useState('');
   const [editingMark, setEditingMark] = useState(null);
@@ -99,18 +99,21 @@ const EditMarks = () => {
     setEditingMark(null);
   };
 
+  const getSectionValue = (s) => {
+    const v = s?.section;
+    const str = v === null || v === undefined ? '' : String(v).trim();
+    return str || 'N/A';
+  };
+
   const getFilteredMarks = () => {
     let filtered = marks;
 
-    if (filterClass) {
-      const classObj = classes.find((c) => c._id === filterClass);
-      if (classObj) {
-        filtered = filtered.filter((m) => {
-          const student = students.find((s) => s._id === (m.student?._id || m.student));
-          const studentClassId = student?.class?._id || student?.class;
-          return String(studentClassId) === String(classObj._id);
-        });
-      }
+    if (filterSection) {
+      filtered = filtered.filter((m) => {
+        const student = students.find((s) => String(s._id) === String(m.student?._id || m.student));
+        const sectionValue = getSectionValue(student ?? m.student ?? {});
+        return sectionValue === filterSection;
+      });
     }
 
     return filtered;
@@ -121,14 +124,27 @@ const EditMarks = () => {
   }
 
   const filteredMarks = getFilteredMarks();
-  const teacherClasses = classes.filter((cls) => {
-    return cls.subjects?.some(
-      (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
-    );
+  const teacherClasses = classes.filter((cls) =>
+    cls.subjects?.some((s) => String(s.teacher?._id || s.teacher) === String(user?._id))
+  );
+  const teacherStudents = students.filter((s) => {
+    const studentClassId = s.class?._id ?? s.class;
+    return teacherClasses.some((cls) => String(cls._id) === String(studentClassId));
   });
+  const sectionSet = new Set(
+    (teacherStudents.length > 0 ? teacherStudents : students).map((s) => getSectionValue(s))
+  );
+  const sections = [...sectionSet].sort((a, b) =>
+    a === 'N/A' ? 1 : b === 'N/A' ? -1 : a.localeCompare(b)
+  );
 
-  // All students for dropdown, sorted by name; label: "Name (Section)"
-  const allStudentsSorted = [...students].sort((a, b) => {
+  // Students for dropdown: all or filtered by section, sorted by name; label: "Name (Section)"
+  const studentsForDropdown = filterSection
+    ? (teacherStudents.length > 0 ? teacherStudents : students).filter(
+        (s) => getSectionValue(s) === filterSection
+      )
+    : teacherStudents.length > 0 ? teacherStudents : students;
+  const allStudentsSorted = [...studentsForDropdown].sort((a, b) => {
     const nameA = (a?.name ?? a?.user?.name ?? '').toString().toLowerCase();
     const nameB = (b?.name ?? b?.user?.name ?? '').toString().toLowerCase();
     return nameA.localeCompare(nameB);
@@ -148,14 +164,17 @@ const EditMarks = () => {
 
       <div style={styles.filters}>
         <select
-          value={filterClass}
-          onChange={(e) => setFilterClass(e.target.value)}
+          value={filterSection}
+          onChange={(e) => {
+            setFilterSection(e.target.value);
+            setFilterStudent('');
+          }}
           style={styles.select}
         >
-          <option value="">All Classes</option>
-          {teacherClasses.map((cls) => (
-            <option key={cls._id} value={cls._id}>
-              {cls.class_name}
+          <option value="">All Sections</option>
+          {sections.map((sec) => (
+            <option key={sec} value={sec}>
+              {sec}
             </option>
           ))}
         </select>
@@ -165,7 +184,9 @@ const EditMarks = () => {
           onChange={(e) => setFilterStudent(e.target.value)}
           style={styles.select}
         >
-          <option value="">Select Student</option>
+          <option value="">
+            {filterSection ? 'Select Student' : 'Select section (optional)'}
+          </option>
           {allStudentsSorted.map((student) => (
             <option key={student._id} value={student._id}>
               {getStudentLabel(student)}

@@ -13,15 +13,39 @@ const router = express.Router();
 // Create student
 router.post('/', async (req, res) => {
   try {
-    // Validate that the class exists
-    if (req.body.class) {
-      const classExists = await Class.findById(req.body.class);
-      if (!classExists) {
-        return res.status(400).json({ message: 'Class not found' });
+    // Resolve class: accept ObjectId or class name
+    let classId = req.body.class;
+    if (classId) {
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(classId);
+      if (isObjectId) {
+        const classExists = await Class.findById(classId);
+        if (!classExists) {
+          return res.status(400).json({ message: 'Class not found' });
+        }
+      } else {
+        const nameTrimmed = String(classId).trim();
+        const escaped = nameTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        let byName = await Class.findOne({
+          class_name: { $regex: new RegExp(`^${escaped}$`, 'i') },
+        });
+        // If class "cs" is requested but doesn't exist, create it so Add Student works
+        if (!byName && /^cs$/i.test(nameTrimmed)) {
+          const maxClass = await Class.findOne().sort({ class_id: -1 }).select('class_id').lean();
+          const nextClassId = (maxClass?.class_id ?? 0) + 1;
+          byName = await Class.create({
+            class_id: nextClassId,
+            class_name: 'CS',
+          });
+        }
+        if (!byName) {
+          return res.status(400).json({ message: `Class "${classId}" not found. Please select a class from the list.` });
+        }
+        classId = byName._id;
       }
     }
+    const body = { ...req.body, class: classId };
 
-    const student = await Student.create(req.body);
+    const student = await Student.create(body);
     const populatedStudent = await Student.findById(student._id)
       .populate('class', 'class_name')
       .populate('user', 'name email');
@@ -43,11 +67,9 @@ router.get('/', async (req, res) => {
     }
 
     const students = await Student.find(query)
-      .select('name student_id class section user')
       .populate('class', 'class_name')
       .populate('user', 'name email')
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
     res.json(students);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch students' });

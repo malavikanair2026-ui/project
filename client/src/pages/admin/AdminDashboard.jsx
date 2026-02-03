@@ -17,20 +17,23 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const [users, students, subjects, results] = await Promise.all([
+      const [usersRes, studentsRes, subjectsRes, resultsRes] = await Promise.all([
         usersAPI.getAll(),
         studentsAPI.getAll(),
         subjectsAPI.getAll(),
         resultsAPI.getAll(),
       ]);
-
-      const pendingResults = results.data.filter((r) => r.status === 'pending').length;
+      const usersList = Array.isArray(usersRes?.data) ? usersRes.data : [];
+      const studentsList = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
+      const subjectsList = Array.isArray(subjectsRes?.data) ? subjectsRes.data : [];
+      const resultsList = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
+      const pendingResults = resultsList.filter((r) => r.status === 'pending').length;
 
       setStats({
-        totalUsers: users.data.length,
-        totalStudents: students.data.length,
-        totalSubjects: subjects.data.length,
-        totalResults: results.data.length,
+        totalUsers: usersList.length,
+        totalStudents: studentsList.length,
+        totalSubjects: subjectsList.length,
+        totalResults: resultsList.length,
         pendingResults,
       });
     } catch (error) {

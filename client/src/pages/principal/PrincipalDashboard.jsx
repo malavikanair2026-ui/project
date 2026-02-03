@@ -22,14 +22,14 @@ const PrincipalDashboard = () => {
         studentsAPI.getAll(),
         resultsAPI.getAll(),
       ]);
-
-      let students = studentsRes.data;
-      let results = resultsRes.data;
+      let students = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
+      let results = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
 
       if (selectedSection) {
         students = students.filter((s) => s.section === selectedSection);
+        const allStudents = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
         results = results.filter((r) => {
-          const student = studentsRes.data.find((s) => s._id === r.student?._id || s._id === r.student);
+          const student = allStudents.find((s) => s._id === r.student?._id || s._id === r.student);
           return student?.section === selectedSection;
         });
       }

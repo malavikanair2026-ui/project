@@ -23,9 +23,8 @@ const StaffDashboard = () => {
         studentsAPI.getAll(),
         resultsAPI.getAll(),
       ]);
-
-      const students = studentsRes.data;
-      const results = resultsRes.data;
+      const students = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
+      const results = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
       const pendingResults = results.filter((r) => r.status === 'pending').length;
       const approvedResults = results.filter((r) => r.status === 'approved').length;
       const totalPercentage = results.reduce((sum, r) => sum + (r.percentage || 0), 0);

@@ -22,9 +22,6 @@ if (!process.env.MONGO_URI) {
 // Initialize Express app
 const app = express();
 
-// Connect to MongoDB
-connectDB();
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -48,9 +45,16 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/grading-schemas', require('./routes/gradingSchemaRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
-// Start server
+// Connect to MongoDB then start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to start server:', err.message);
+    process.exit(1);
+  });
 

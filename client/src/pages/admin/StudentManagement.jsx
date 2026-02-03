@@ -64,19 +64,17 @@ const StudentManagement = () => {
     setError('');
 
     try {
-      // When adding, resolve class name to class _id (server expects _id)
-      let classId = formData.class;
-      if (!editingStudent && formData.class) {
-        const matched = classes.find(
-          (c) => (c.class_name || '').toLowerCase() === (formData.class || '').trim().toLowerCase()
-        );
-        classId = matched?._id || formData.class;
+      // When adding, formData.class is text (e.g. "cs"); server resolves to ObjectId. When editing, it's _id.
+      const classVal = (formData.class || '').trim();
+      if (!classVal) {
+        setError('Please enter a class');
+        return;
       }
       const submitData = {
         ...formData,
-        class: classId,
+        class: editingStudent ? formData.class : classVal,
         student_id: Number(formData.student_id),
-        dob: new Date(formData.dob),
+        dob: formData.dob ? new Date(formData.dob) : null,
       };
 
       if (editingStudent) {
@@ -183,6 +181,12 @@ const StudentManagement = () => {
     _id: c._id,
     class_name: c.class_name
   }));
+
+  // When adding, only show users with role student who don't already have a student record
+  const linkedUserIds = new Set(
+    students.map(s => (s.user?._id || s.user)).filter(Boolean)
+  );
+  const availableUsers = users.filter(u => !linkedUserIds.has(u._id));
 
   // Get unique sections from students
   const uniqueSections = [...new Set(students.map(s => s.section).filter(Boolean))].sort();
@@ -393,8 +397,14 @@ const StudentManagement = () => {
                   required
                   style={styles.input}
                 >
-                  <option value="">Select User</option>
-                  {users.map((user) => (
+                  <option value="">
+                    {editingStudent
+                      ? 'Select User'
+                      : availableUsers.length === 0
+                        ? 'No available users (create a user with role Student first)'
+                        : 'Select User'}
+                  </option>
+                  {(editingStudent ? users : availableUsers).map((user) => (
                     <option key={user._id} value={user._id}>
                       {user.name} ({user.email})
                     </option>

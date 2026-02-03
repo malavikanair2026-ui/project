@@ -37,6 +37,8 @@ export const PrincipalProvider = ({ children }) => {
       setStudents(studentsData);
     } catch (error) {
       console.error('Failed to fetch principal context data:', error);
+      setClasses([]);
+      setStudents([]);
     } finally {
       setLoading(false);
     }

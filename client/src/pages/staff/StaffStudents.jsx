@@ -22,12 +22,12 @@ const StaffStudents = () => {
   const fetchData = async () => {
     try {
       const studentsRes = await studentsAPI.getAll();
-      setStudents(studentsRes.data);
-      // Marks will be fetched per student if needed, or we can skip this
+      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
       setMarks([]);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load students', 'error');
+      setStudents([]);
     } finally {
       setLoading(false);
     }

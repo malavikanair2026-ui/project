@@ -24,13 +24,14 @@ const PrincipalResults = () => {
         studentsAPI.getAll(),
         classesAPI.getAll(),
       ]);
-
-      setResults(resultsRes.data);
-      setStudents(studentsRes.data);
-      const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
-      setClasses(classesData);
+      setResults(Array.isArray(resultsRes?.data) ? resultsRes.data : []);
+      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
+      const classesData = Array.isArray(classesRes?.data) ? classesRes.data : classesRes?.data?.data || classesRes?.data || [];
+      setClasses(Array.isArray(classesData) ? classesData : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      setResults([]);
+      setStudents([]);
     } finally {
       setLoading(false);
     }

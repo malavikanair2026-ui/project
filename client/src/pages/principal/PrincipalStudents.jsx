@@ -28,14 +28,15 @@ const PrincipalStudents = () => {
         resultsAPI.getAll(),
         classesAPI.getAll(),
       ]);
-
-      setStudents(studentsRes.data);
-      setResults(resultsRes.data);
-      const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
-      setClasses(classesData);
+      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
+      setResults(Array.isArray(resultsRes?.data) ? resultsRes.data : []);
+      const classesData = Array.isArray(classesRes?.data) ? classesRes.data : classesRes?.data?.data || classesRes?.data || [];
+      setClasses(Array.isArray(classesData) ? classesData : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load students', 'error');
+      setStudents([]);
+      setResults([]);
     } finally {
       setLoading(false);
     }
