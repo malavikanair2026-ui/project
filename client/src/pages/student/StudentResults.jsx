@@ -240,21 +240,21 @@ const StudentResults = () => {
                 <table style={styles.table}>
                   <thead>
                     <tr>
-                      <th>Subject</th>
-                      <th>Marks Obtained</th>
-                      <th>Max Marks</th>
-                      <th>Exam Type</th>
-                      <th>Semester</th>
+                      <th style={styles.th}>Subject</th>
+                      <th style={styles.th}>Marks Obtained</th>
+                      <th style={styles.th}>Max Marks</th>
+                      <th style={styles.th}>Exam Type</th>
+                      <th style={styles.th}>Semester</th>
                     </tr>
                   </thead>
                   <tbody>
                     {marks.map((mark) => (
                       <tr key={mark._id}>
-                        <td>{mark.subject?.subject_name || 'N/A'}</td>
-                        <td>{mark.marks_obtained}</td>
-                        <td>{mark.subject?.max_marks || 'N/A'}</td>
-                        <td>{mark.exam_type}</td>
-                        <td>{mark.semester || 'N/A'}</td>
+                        <td style={styles.td}>{mark.subject?.subject_name || 'N/A'}</td>
+                        <td style={styles.td}>{mark.marks_obtained}</td>
+                        <td style={styles.td}>{mark.subject?.max_marks || 'N/A'}</td>
+                        <td style={styles.td}>{mark.exam_type}</td>
+                        <td style={styles.td}>{mark.semester || 'N/A'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -383,6 +383,7 @@ const styles = {
   },
   td: {
     padding: '12px',
+    textAlign: 'left',
     borderBottom: '1px solid #dee2e6',
   },
   noDataCard: {

@@ -304,6 +304,7 @@ const styles = {
   },
   td: {
     padding: '15px',
+    textAlign: 'left',
     borderBottom: '1px solid #dee2e6',
   },
   badge: {

@@ -713,6 +713,7 @@ const styles = {
   },
   td: {
     padding: '12px',
+    textAlign: 'left',
     borderBottom: '1px solid #dee2e6',
   },
   gradeBadge: {
