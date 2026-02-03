@@ -1,7 +1,23 @@
 import { useState, useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 import { resultsAPI, studentsAPI, analyticsAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
+
+const CHART_COLORS = ['#3498db', '#27ae60', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+const GRADE_COLORS = { A: '#27ae60', B: '#3498db', C: '#f39c12', D: '#e67e22', F: '#e74c3c' };
 
 const Analytics = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -214,9 +230,68 @@ const Analytics = () => {
             </div>
           </div>
 
-          <div style={styles.grid}>
+          <div style={styles.chartSection}>
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>Grade Distribution</h3>
+              {Object.keys(overview.gradeDistribution).length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart
+                    data={Object.entries(overview.gradeDistribution)
+                      .sort(([a], [b]) => (a < b ? -1 : 1))
+                      .map(([grade, count]) => ({ grade, count }))}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                    <XAxis dataKey="grade" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip formatter={(value) => [`${value} students`, 'Count']} />
+                    <Bar dataKey="count" name="Students" radius={[4, 4, 0, 0]}>
+                      {Object.entries(overview.gradeDistribution)
+                        .sort(([a], [b]) => (a < b ? -1 : 1))
+                        .map((entry, index) => (
+                          <Cell key={entry[0]} fill={GRADE_COLORS[entry[0]] || CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p style={styles.noData}>No data available</p>
+              )}
+            </div>
+
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Pass / Fail</h3>
+              {overview.totalResults > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Passed', value: overview.passCount, fill: '#27ae60' },
+                        { name: 'Failed', value: overview.failCount, fill: '#e74c3c' },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                    >
+                      <Cell key="pass" fill="#27ae60" />
+                      <Cell key="fail" fill="#e74c3c" />
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} students`, '']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p style={styles.noData}>No data available</p>
+              )}
+            </div>
+          </div>
+
+          <div style={styles.grid}>
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Grade Distribution (Table)</h3>
               <div style={styles.gradeList}>
                 {Object.entries(overview.gradeDistribution).map(([grade, count]) => (
                   <div key={grade} style={styles.gradeItem}>
@@ -270,7 +345,31 @@ const Analytics = () => {
       {activeTab === 'section' && (
         <div>
           {Object.keys(sectionPerformance).length > 0 ? (
-            <div style={styles.classGrid}>
+            <>
+              <div style={styles.chartCard}>
+                <h3 style={styles.cardTitle}>Section Performance Comparison</h3>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart
+                    data={Object.values(sectionPerformance).map((s) => ({
+                      section: s.sectionName,
+                      avgPercent: Number(s.averagePercentage.toFixed(1)),
+                      passRate: Number(s.passRate.toFixed(1)),
+                      students: s.totalStudents,
+                    }))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                    <XAxis dataKey="section" tick={{ fontSize: 12 }} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="avgPercent" name="Avg %" fill="#3498db" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="passRate" name="Pass Rate %" fill="#27ae60" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div style={styles.classGrid}>
               {Object.values(sectionPerformance).map((sectionData) => (
                 <div key={sectionData.sectionName} style={styles.classCard}>
                   <h3 style={styles.classTitle}>Section {sectionData.sectionName}</h3>
@@ -327,6 +426,7 @@ const Analytics = () => {
                 </div>
               ))}
             </div>
+            </>
           ) : (
             <div style={styles.noDataCard}>No section performance data available</div>
           )}
@@ -336,7 +436,30 @@ const Analytics = () => {
       {activeTab === 'subject' && (
         <div>
           {Object.keys(subjectAnalysis).length > 0 ? (
-            <div style={styles.subjectGrid}>
+            <>
+              <div style={styles.chartCard}>
+                <h3 style={styles.cardTitle}>Subject-wise Average & Pass Rate</h3>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart
+                    data={Object.values(subjectAnalysis).map((s) => ({
+                      subject: s.subjectName?.length > 12 ? s.subjectName.slice(0, 12) + '…' : s.subjectName,
+                      fullName: s.subjectName,
+                      avgPercent: Number(s.averagePercentage.toFixed(1)),
+                      passRate: Number(s.passRate.toFixed(1)),
+                    }))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                    <XAxis dataKey="subject" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(value) => [`${value}%`, '']} content={({ active, payload }) => active && payload?.[0] ? <div style={{ padding: '10px 14px', background: '#fff', border: '1px solid #ddd', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '13px' }}><div style={{ fontWeight: 600, marginBottom: 6 }}>{payload[0].payload.fullName}</div><div>Avg %: {payload[0].payload.avgPercent}%</div><div>Pass Rate: {payload[0].payload.passRate}%</div></div> : null} />
+                    <Legend />
+                    <Bar dataKey="avgPercent" name="Avg %" fill="#9b59b6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="passRate" name="Pass Rate %" fill="#1abc9c" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div style={styles.subjectGrid}>
               {Object.values(subjectAnalysis).map((subject) => (
                 <div key={subject.subjectId} style={styles.subjectCard}>
                   <h3 style={styles.subjectTitle}>{subject.subjectName}</h3>
@@ -376,6 +499,7 @@ const Analytics = () => {
                 </div>
               ))}
             </div>
+            </>
           ) : (
             <div style={styles.noDataCard}>No subject analysis data available</div>
           )}
@@ -514,6 +638,19 @@ const styles = {
     fontSize: '14px',
     color: '#7f8c8d',
     marginTop: '5px',
+  },
+  chartSection: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gap: '20px',
+    marginBottom: '30px',
+  },
+  chartCard: {
+    backgroundColor: 'white',
+    padding: '25px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    marginBottom: '20px',
   },
   grid: {
     display: 'grid',
