@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useAuth } from '../../context/AuthContext';
 import { studentsAPI, resultsAPI, marksAPI } from '../../services/api';
 
@@ -65,6 +67,82 @@ const StudentResults = () => {
     return colors[status] || '#95a5a6';
   };
 
+  const exportToPdf = () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // Title
+    doc.setFontSize(22);
+    doc.setFont(undefined, 'bold');
+    doc.text('My Results', pageWidth / 2, y, { align: 'center' });
+    y += 12;
+
+    // Student info
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Student: ${student.name || 'N/A'}`, 14, y);
+    y += 6;
+    doc.text(`Student ID: ${student.student_id || 'N/A'}`, 14, y);
+    y += 6;
+    doc.text(`Semester: ${selectedSemester || 'All Semesters'}`, 14, y);
+    y += 14;
+
+    // Results summary table
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('Result Summary', 14, y);
+    y += 10;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Semester', 'Total Marks', 'Percentage', 'Grade', 'SGPA', 'Status']],
+      body: results.map((r) => [
+        r.semester || '-',
+        String(r.total_marks ?? '-'),
+        r.percentage != null ? `${r.percentage.toFixed(2)}%` : '-',
+        r.grade || '-',
+        r.sgpa != null ? r.sgpa.toFixed(2) : '-',
+        (r.status || '-').toUpperCase(),
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [52, 152, 219], fontSize: 10 },
+      bodyStyles: { fontSize: 9 },
+      margin: { left: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 14;
+
+    // Subject-wise marks
+    if (marks.length > 0) {
+      if (y > 240) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Subject-wise Marks', 14, y);
+      y += 10;
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Subject', 'Marks Obtained', 'Max Marks', 'Exam Type', 'Semester']],
+        body: marks.map((m) => [
+          m.subject?.subject_name || 'N/A',
+          String(m.marks_obtained ?? '-'),
+          String(m.subject?.max_marks ?? 'N/A'),
+          m.exam_type || '-',
+          m.semester || 'N/A',
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219], fontSize: 10 },
+        bodyStyles: { fontSize: 9 },
+        margin: { left: 14 },
+      });
+    }
+
+    doc.save(`results_${student.student_id || 'student'}_${selectedSemester || 'all'}.pdf`);
+  };
+
   if (loading) {
     return <div style={styles.loading}>Loading...</div>;
   }
@@ -83,20 +161,27 @@ const StudentResults = () => {
     <div>
       <div style={styles.header}>
         <h2 style={styles.title}>My Results</h2>
-        {uniqueSemesters.length > 0 && (
-          <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
-            style={styles.select}
-          >
-            <option value="">All Semesters</option>
-            {uniqueSemesters.map((sem) => (
-              <option key={sem} value={sem}>
-                {sem}
-              </option>
-            ))}
-          </select>
-        )}
+        <div style={styles.headerActions}>
+          {uniqueSemesters.length > 0 && (
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              style={styles.select}
+            >
+              <option value="">All Semesters</option>
+              {uniqueSemesters.map((sem) => (
+                <option key={sem} value={sem}>
+                  {sem}
+                </option>
+              ))}
+            </select>
+          )}
+          {results.length > 0 && (
+            <button type="button" onClick={exportToPdf} style={styles.exportBtn}>
+              Export to PDF
+            </button>
+          )}
+        </div>
       </div>
 
       {results.length === 0 ? (
@@ -189,17 +274,34 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '30px',
+    flexWrap: 'wrap',
+    gap: '12px',
   },
   title: {
     fontSize: '28px',
     color: '#2c3e50',
     margin: 0,
   },
+  headerActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
   select: {
     padding: '8px 12px',
     border: '1px solid #ddd',
     borderRadius: '4px',
     fontSize: '16px',
+  },
+  exportBtn: {
+    padding: '10px 18px',
+    backgroundColor: '#3498db',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
   },
   resultsGrid: {
     display: 'grid',
