@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Marks = require('../models/Marks');
 const Subject = require('../models/Subject');
 
@@ -54,6 +55,61 @@ router.post('/:studentId', async (req, res) => {
     res.status(201).json(mark);
   } catch (err) {
     res.status(400).json({ message: err.message || 'Failed to save marks' });
+  }
+});
+
+// Get marks count per student (for students list) - must be before /:studentId
+router.get('/counts', async (req, res) => {
+  try {
+    const counts = await Marks.aggregate([
+      { $group: { _id: '$student', count: { $sum: 1 } } },
+    ]);
+    const byStudent = {};
+    counts.forEach((c) => {
+      byStudent[c._id.toString()] = c.count;
+    });
+    res.json(byStudent);
+  } catch (err) {
+    res.status(500).json({ message: err.message || 'Failed to fetch marks counts' });
+  }
+});
+
+// Get marks grouped by student (for students list display) - must be before /:studentId
+router.get('/by-students', async (req, res) => {
+  try {
+    const studentIds = req.query.studentIds;
+    if (!studentIds) {
+      return res.json({});
+    }
+    const rawIds = typeof studentIds === 'string' ? studentIds.split(',') : studentIds;
+    const validId = (id) => typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id.trim());
+    const ids = rawIds
+      .map((id) => (typeof id === 'string' ? id.trim() : String(id)))
+      .filter(validId);
+    if (!ids.length) return res.json({});
+
+    const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+    const marks = await Marks.find({ student: { $in: objectIds } }).populate('subject');
+    const byStudent = {};
+    ids.forEach((id) => {
+      byStudent[id] = [];
+    });
+    marks.forEach((m) => {
+      const sid = m.student ? m.student.toString() : null;
+      if (!sid) return;
+      if (!byStudent[sid]) byStudent[sid] = [];
+      byStudent[sid].push({
+        subjectName: m.subject?.subject_name || m.subject?.name || '-',
+        marks_obtained: m.marks_obtained,
+        max_marks: m.subject?.max_marks,
+        semester: m.semester,
+        exam_type: m.exam_type,
+      });
+    });
+    res.json(byStudent);
+  } catch (err) {
+    console.error('by-students error:', err);
+    res.status(500).json({ message: err.message || 'Failed to fetch marks by students' });
   }
 });
 

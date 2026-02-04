@@ -6,7 +6,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 
 const StaffStudents = () => {
   const [students, setStudents] = useState([]);
-  const [marks, setMarks] = useState([]);
+  const [marksByStudent, setMarksByStudent] = useState({});
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
   const [filterSection, setFilterSection] = useState('');
@@ -22,12 +22,21 @@ const StaffStudents = () => {
   const fetchData = async () => {
     try {
       const studentsRes = await studentsAPI.getAll();
-      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
-      setMarks([]);
+      const studentList = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
+      setStudents(studentList);
+
+      const ids = studentList.map((s) => s._id).filter(Boolean);
+      if (ids.length > 0) {
+        const marksRes = await marksAPI.getByStudentIds(ids);
+        setMarksByStudent(typeof marksRes?.data === 'object' && marksRes.data !== null ? marksRes.data : {});
+      } else {
+        setMarksByStudent({});
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load students', 'error');
       setStudents([]);
+      setMarksByStudent({});
     } finally {
       setLoading(false);
     }
@@ -60,10 +69,11 @@ const StaffStudents = () => {
     return filtered;
   };
 
-  const getStudentMarksCount = (studentId) => {
-    // For now, return 0 as we're not fetching all marks
-    // This could be enhanced to fetch marks per student if needed
-    return 0;
+  const getStudentMarks = (studentId) => {
+    if (!studentId) return [];
+    const id = typeof studentId === 'string' ? studentId : studentId.toString();
+    const list = marksByStudent[id];
+    return Array.isArray(list) ? list : [];
   };
 
   const groupStudentsByClass = (studentList) => {
@@ -216,16 +226,29 @@ const StaffStudents = () => {
                       </thead>
                       <tbody>
                         {classStudents.map((student) => {
-                          const marksCount = getStudentMarksCount(student._id);
+                          const enteredMarks = getStudentMarks(student._id);
                           return (
                             <tr key={student._id}>
                               <td style={styles.td}>{student.student_id}</td>
                               <td style={{ ...styles.td, ...styles.nameCell }}>{student.name}</td>
                               <td style={styles.td}>{student.section || 'N/A'}</td>
                               <td style={styles.td}>
-                                <span style={styles.marksCount}>
-                                  {marksCount} entries
-                                </span>
+                                <div style={styles.marksCell}>
+                                  <span style={styles.marksCount}>
+                                    {enteredMarks.length} {enteredMarks.length === 1 ? 'entry' : 'entries'}
+                                  </span>
+                                  {enteredMarks.length > 0 && (
+                                    <div style={styles.marksList}>
+                                      {enteredMarks.map((m, i) => (
+                                        <span key={i} style={styles.marksItem}>
+                                          {m.subjectName}: {m.marks_obtained}
+                                          {m.max_marks != null ? `/${m.max_marks}` : ''}
+                                          {m.semester ? ` (${m.semester})` : ''}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td style={styles.td}>
                                 <button
@@ -372,9 +395,24 @@ const styles = {
     fontWeight: '500',
     color: '#2c3e50',
   },
+  marksCell: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
   marksCount: {
     color: '#3498db',
     fontWeight: '500',
+  },
+  marksList: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px 12px',
+    fontSize: '12px',
+    color: '#5a6c7d',
+  },
+  marksItem: {
+    whiteSpace: 'nowrap',
   },
   enterButton: {
     padding: '6px 12px',

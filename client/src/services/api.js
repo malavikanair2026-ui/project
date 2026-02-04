@@ -43,8 +43,6 @@ export const authAPI = {
   register: (userData) => api.post('/auth/register', userData),
   getProfile: () => api.get('/auth/profile'),
   logout: () => api.post('/auth/logout'),
-  changePassword: (currentPassword, newPassword) =>
-    api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // Students API
@@ -71,6 +69,11 @@ export const marksAPI = {
   getByStudent: (studentId, semester) => {
     const params = semester ? { semester } : {};
     return api.get(`/marks/${studentId}`, { params });
+  },
+  getCounts: () => api.get('/marks/counts'),
+  getByStudentIds: (studentIds) => {
+    const ids = Array.isArray(studentIds) ? studentIds.join(',') : studentIds;
+    return api.get('/marks/by-students', { params: { studentIds: ids } });
   },
   add: (studentId, data) => api.post(`/marks/${studentId}`, data),
 };
