@@ -24,6 +24,7 @@ const MarksEntry = () => {
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [unapprovedStudentIds, setUnapprovedStudentIds] = useState(new Set());
 
   useEffect(() => {
     fetchData();
@@ -61,13 +62,23 @@ const MarksEntry = () => {
 
   const fetchData = async () => {
     try {
-      const [classesRes, studentsRes] = await Promise.all([
+      const [classesRes, studentsRes, resultsRes] = await Promise.all([
         classesAPI.getAll({ teacher: user?._id }),
         studentsAPI.getAll(),
+        resultsAPI.getAll(),
       ]);
       setClasses(Array.isArray(classesRes.data) ? classesRes.data : []);
       const studentsList = Array.isArray(studentsRes.data) ? studentsRes.data : [];
       setStudents(studentsList);
+
+      const results = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
+      const ids = new Set(
+        results
+          .filter((r) => r.status !== 'approved')
+          .map((r) => (r.student?._id ?? r.student)?.toString())
+          .filter(Boolean)
+      );
+      setUnapprovedStudentIds(ids);
 
       // If studentId is in URL, try to find and set the class
       const studentIdParam = searchParams.get('studentId');
@@ -156,6 +167,10 @@ const MarksEntry = () => {
           return sec === className || sec === classIdStr;
         })
       : [];
+  // Only show students whose marks are not approved by admin
+  const studentsForDropdown = studentsWhereSectionEqualsClass.filter((stu) =>
+    unapprovedStudentIds.has(String(stu._id))
+  );
 
   // Always show a visible name in dropdown (API may use name or user.name)
   const getStudentLabel = (stu) => {
@@ -234,7 +249,7 @@ const MarksEntry = () => {
               <option value="">
                 {loadingStudentsInClass ? 'Loading students...' : formData.classId ? 'Select student' : 'Select class first'}
               </option>
-              {studentsWhereSectionEqualsClass.map((stu) => (
+              {studentsForDropdown.map((stu) => (
                 <option key={stu._id} value={stu._id != null ? String(stu._id) : ''}>
                   {getStudentLabel(stu)}
                 </option>

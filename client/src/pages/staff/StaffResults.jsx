@@ -142,20 +142,20 @@ const StaffResults = () => {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th>Student Name</th>
-              <th>Class</th>
-              <th>Section</th>
-              <th>Semester</th>
-              <th>Total Marks</th>
-              <th>Percentage</th>
-              <th>Grade</th>
-              <th>Status</th>
+              <th style={styles.th}>Student Name</th>
+              <th style={styles.th}>Class</th>
+              <th style={styles.th}>Section</th>
+              <th style={styles.th}>Semester</th>
+              <th style={styles.th}>Total Marks</th>
+              <th style={styles.th}>Percentage</th>
+              <th style={styles.th}>Grade</th>
+              <th style={styles.th}>Status</th>
             </tr>
           </thead>
           <tbody>
             {filteredResults.length === 0 ? (
               <tr>
-                <td colSpan="8" style={styles.noData}>
+                <td colSpan="8" style={{ ...styles.td, ...styles.noData }}>
                   No results found
                 </td>
               </tr>
@@ -166,13 +166,13 @@ const StaffResults = () => {
                 );
                 return (
                   <tr key={result._id} style={styles.tableRow}>
-                    <td style={styles.nameCell}>{student?.name || result.student?.name || '-'}</td>
-                    <td>{student?.class?.class_name || student?.class || 'cs'}</td>
-                    <td>{student?.section || '-'}</td>
-                    <td>{result.semester}</td>
-                    <td>{result.total_marks}</td>
-                    <td>{result.percentage.toFixed(2)}%</td>
-                    <td>
+                    <td style={{ ...styles.td, ...styles.nameCell }}>{student?.name || result.student?.name || '-'}</td>
+                    <td style={styles.td}>{student?.class?.class_name || student?.class || 'cs'}</td>
+                    <td style={styles.td}>{student?.section || '-'}</td>
+                    <td style={styles.td}>{result.semester}</td>
+                    <td style={styles.td}>{result.total_marks}</td>
+                    <td style={styles.td}>{result.percentage.toFixed(2)}%</td>
+                    <td style={styles.td}>
                       <span
                         style={{
                           ...styles.gradeBadge,
@@ -182,7 +182,7 @@ const StaffResults = () => {
                         {result.grade}
                       </span>
                     </td>
-                    <td>
+                    <td style={styles.td}>
                       <span
                         style={{
                           ...styles.statusBadge,

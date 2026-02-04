@@ -207,11 +207,11 @@ const StaffStudents = () => {
                     <table style={styles.table}>
                       <thead>
                         <tr>
-                          <th>Student ID</th>
-                          <th>Name</th>
-                          <th>Section</th>
-                          <th>Marks Entered</th>
-                          <th>Actions</th>
+                          <th style={styles.th}>Student ID</th>
+                          <th style={styles.th}>Name</th>
+                          <th style={styles.th}>Section</th>
+                          <th style={styles.th}>Marks Entered</th>
+                          <th style={styles.th}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -219,15 +219,15 @@ const StaffStudents = () => {
                           const marksCount = getStudentMarksCount(student._id);
                           return (
                             <tr key={student._id}>
-                              <td>{student.student_id}</td>
-                              <td style={styles.nameCell}>{student.name}</td>
-                              <td>{student.section || 'N/A'}</td>
-                              <td>
+                              <td style={styles.td}>{student.student_id}</td>
+                              <td style={{ ...styles.td, ...styles.nameCell }}>{student.name}</td>
+                              <td style={styles.td}>{student.section || 'N/A'}</td>
+                              <td style={styles.td}>
                                 <span style={styles.marksCount}>
                                   {marksCount} entries
                                 </span>
                               </td>
-                              <td>
+                              <td style={styles.td}>
                                 <button
                                   onClick={() => handleEnterMarks(student._id)}
                                   style={styles.enterButton}
