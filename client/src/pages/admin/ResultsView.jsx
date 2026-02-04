@@ -68,33 +68,33 @@ const ResultsView = () => {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th>Student</th>
-              <th>Semester</th>
-              <th>Total Marks</th>
-              <th>Percentage</th>
-              <th>Grade</th>
-              <th>SGPA</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th style={styles.th}>Student</th>
+              <th style={styles.th}>Semester</th>
+              <th style={styles.th}>Total Marks</th>
+              <th style={styles.th}>Percentage</th>
+              <th style={styles.th}>Grade</th>
+              <th style={styles.th}>SGPA</th>
+              <th style={styles.th}>Status</th>
+              <th style={styles.th}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {results.length === 0 ? (
               <tr>
-                <td colSpan="8" style={styles.noData}>
+                <td colSpan="8" style={{ ...styles.td, ...styles.noData, textAlign: 'left' }}>
                   No results found
                 </td>
               </tr>
             ) : (
               results.map((result) => (
                 <tr key={result._id}>
-                  <td>
+                  <td style={styles.td}>
                     {result.student?.name || '-'}
                   </td>
-                  <td>{result.semester}</td>
-                  <td>{result.total_marks}</td>
-                  <td>{result.percentage.toFixed(2)}%</td>
-                  <td>
+                  <td style={styles.td}>{result.semester}</td>
+                  <td style={styles.td}>{result.total_marks}</td>
+                  <td style={styles.td}>{result.percentage.toFixed(2)}%</td>
+                  <td style={styles.td}>
                     <span
                       style={{
                         ...styles.gradeBadge,
@@ -104,8 +104,8 @@ const ResultsView = () => {
                       {result.grade}
                     </span>
                   </td>
-                  <td>{result.sgpa.toFixed(2)}</td>
-                  <td>
+                  <td style={styles.td}>{result.sgpa.toFixed(2)}</td>
+                  <td style={styles.td}>
                     <span
                       style={{
                         ...styles.statusBadge,
@@ -115,7 +115,7 @@ const ResultsView = () => {
                       {result.status}
                     </span>
                   </td>
-                  <td>
+                  <td style={styles.td}>
                     <div style={styles.actionButtons}>
                       {result.status !== 'approved' && (
                         <button

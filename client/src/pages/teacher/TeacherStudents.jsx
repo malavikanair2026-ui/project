@@ -170,28 +170,28 @@ const TeacherStudents = () => {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th>Student ID</th>
-              <th>Name</th>
-              <th>Class</th>
-              <th>Section</th>
-              <th>Actions</th>
+              <th style={styles.th}>Student ID</th>
+              <th style={styles.th}>Name</th>
+              <th style={styles.th}>Class</th>
+              <th style={styles.th}>Section</th>
+              <th style={styles.th}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredStudents.length === 0 ? (
               <tr>
-                <td colSpan="5" style={styles.noData}>
+                <td colSpan="5" style={{ ...styles.td, ...styles.noData }}>
                   No students found
                 </td>
               </tr>
             ) : (
               filteredStudents.map((student) => (
                 <tr key={student._id}>
-                  <td>{student.student_id}</td>
-                  <td style={styles.nameCell}>{student.name}</td>
-                  <td>{student.class?.class_name || student.class || 'CS'}</td>
-                  <td>{student.section || 'N/A'}</td>
-                  <td>
+                  <td style={styles.td}>{student.student_id}</td>
+                  <td style={{ ...styles.td, ...styles.nameCell }}>{student.name}</td>
+                  <td style={styles.td}>{student.class?.class_name || student.class || 'CS'}</td>
+                  <td style={styles.td}>{student.section || 'N/A'}</td>
+                  <td style={styles.td}>
                     <div style={styles.actionButtons}>
                       <button
                         onClick={() => handleEnterMarks(student._id)}

@@ -137,28 +137,28 @@ const SubjectManagement = () => {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th>Subject ID</th>
-              <th>Subject Name</th>
-              <th>Max Marks</th>
-              <th>Class</th>
-              <th>Actions</th>
+              <th style={styles.th}>Subject ID</th>
+              <th style={styles.th}>Subject Name</th>
+              <th style={styles.th}>Max Marks</th>
+              <th style={styles.th}>Class</th>
+              <th style={styles.th}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredSubjects.length === 0 ? (
               <tr>
-                <td colSpan="5" style={styles.noData}>
+                <td colSpan="5" style={{ ...styles.td, ...styles.noData, textAlign: 'left' }}>
                   No subjects found
                 </td>
               </tr>
             ) : (
               filteredSubjects.map((subject) => (
                 <tr key={subject._id}>
-                  <td>{subject.subject_id}</td>
-                  <td>{subject.subject_name}</td>
-                  <td>{subject.max_marks}</td>
-                  <td>{subject.class?.class_name || 'Not assigned'}</td>
-                  <td>
+                  <td style={styles.td}>{subject.subject_id}</td>
+                  <td style={styles.td}>{subject.subject_name}</td>
+                  <td style={styles.td}>{subject.max_marks}</td>
+                  <td style={styles.td}>{subject.class?.class_name || 'Not assigned'}</td>
+                  <td style={styles.td}>
                     <button
                       onClick={() => handleEdit(subject)}
                       style={styles.editButton}

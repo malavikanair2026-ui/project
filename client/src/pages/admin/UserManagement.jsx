@@ -126,26 +126,26 @@ const UserManagement = () => {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Created</th>
-              <th>Actions</th>
+              <th style={styles.th}>Name</th>
+              <th style={styles.th}>Email</th>
+              <th style={styles.th}>Role</th>
+              <th style={styles.th}>Created</th>
+              <th style={styles.th}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan="5" style={styles.noData}>
+                <td colSpan="5" style={{ ...styles.td, ...styles.noData, textAlign: 'left' }}>
                   No users found
                 </td>
               </tr>
             ) : (
               users.map((user) => (
                 <tr key={user._id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>
+                  <td style={styles.td}>{user.name}</td>
+                  <td style={styles.td}>{user.email}</td>
+                  <td style={styles.td}>
                     <span
                       style={{
                         ...styles.badge,
@@ -155,8 +155,8 @@ const UserManagement = () => {
                       {user.role}
                     </span>
                   </td>
-                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td>
+                  <td style={styles.td}>{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td style={styles.td}>
                     <button
                       onClick={() => handleEdit(user)}
                       style={styles.editButton}

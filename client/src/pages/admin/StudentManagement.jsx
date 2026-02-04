@@ -318,32 +318,32 @@ const StudentManagement = () => {
                     <table style={styles.table}>
                       <thead>
                         <tr>
-                          <th>Student ID</th>
-                          <th>Name</th>
-                          <th>Section</th>
-                          <th>Date of Birth</th>
-                          <th>Actions</th>
+                          <th style={styles.th}>Student ID</th>
+                          <th style={styles.th}>Name</th>
+                          <th style={styles.th}>Section</th>
+                          <th style={styles.th}>Date of Birth</th>
+                          <th style={styles.th}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {classStudents.length === 0 ? (
                           <tr>
-                            <td colSpan="5" style={styles.noData}>
+                            <td colSpan="5" style={{ ...styles.td, ...styles.noData, textAlign: 'left' }}>
                               No students in this class
                             </td>
                           </tr>
                         ) : (
                           classStudents.map((student) => (
                             <tr key={student._id}>
-                              <td>{student.student_id}</td>
-                              <td>{student.name}</td>
-                              <td>{student.section}</td>
-                              <td>
+                              <td style={styles.td}>{student.student_id}</td>
+                              <td style={styles.td}>{student.name}</td>
+                              <td style={styles.td}>{student.section}</td>
+                              <td style={styles.td}>
                                 {student.dob
                                   ? new Date(student.dob).toLocaleDateString()
                                   : 'N/A'}
                               </td>
-                              <td>
+                              <td style={styles.td}>
                                 <button
                                   onClick={() => handleEdit(student)}
                                   style={styles.editButton}
