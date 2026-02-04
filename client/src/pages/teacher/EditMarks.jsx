@@ -212,14 +212,14 @@ const EditMarks = () => {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th>Subject</th>
-                <th>Marks Obtained</th>
-                <th>Max Marks</th>
-                <th>Percentage</th>
-                <th>Exam Type</th>
-                <th>Semester</th>
-                <th>Final</th>
-                <th>Actions</th>
+                <th style={styles.th}>Subject</th>
+                <th style={styles.th}>Marks Obtained</th>
+                <th style={styles.th}>Max Marks</th>
+                <th style={styles.th}>Percentage</th>
+                <th style={styles.th}>Exam Type</th>
+                <th style={styles.th}>Semester</th>
+                <th style={styles.th}>Final</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -231,10 +231,10 @@ const EditMarks = () => {
 
                 return (
                   <tr key={mark._id}>
-                    <td>{subject?.subject_name || '-'}</td>
+                    <td style={styles.td}>{subject?.subject_name || '-'}</td>
                     {isEditing ? (
                       <>
-                        <td>
+                        <td style={styles.td}>
                           <input
                             type="number"
                             value={editingMark.marks_obtained}
@@ -249,13 +249,13 @@ const EditMarks = () => {
                             style={styles.editInput}
                           />
                         </td>
-                        <td>{maxMarks}</td>
-                        <td>
+                        <td style={styles.td}>{maxMarks}</td>
+                        <td style={styles.td}>
                           {editingMark.marks_obtained
                             ? ((editingMark.marks_obtained / maxMarks) * 100).toFixed(1)
                             : '0.0'}%
                         </td>
-                        <td>
+                        <td style={styles.td}>
                           <select
                             value={editingMark.exam_type}
                             onChange={(e) =>
@@ -269,7 +269,7 @@ const EditMarks = () => {
                             <option value="quiz">Quiz</option>
                           </select>
                         </td>
-                        <td>
+                        <td style={styles.td}>
                           <input
                             type="text"
                             value={editingMark.semester}
@@ -279,7 +279,7 @@ const EditMarks = () => {
                             style={styles.editInput}
                           />
                         </td>
-                        <td>
+                        <td style={styles.td}>
                           <input
                             type="checkbox"
                             checked={editingMark.is_final}
@@ -288,7 +288,7 @@ const EditMarks = () => {
                             }
                           />
                         </td>
-                        <td>
+                        <td style={styles.td}>
                           <div style={styles.actionButtons}>
                             <button onClick={handleSave} style={styles.saveButton}>
                               Save
@@ -301,13 +301,13 @@ const EditMarks = () => {
                       </>
                     ) : (
                       <>
-                        <td>{mark.marks_obtained}</td>
-                        <td>{maxMarks}</td>
-                        <td>{percentage}%</td>
-                        <td>{mark.exam_type}</td>
-                        <td>{mark.semester || 'N/A'}</td>
-                        <td>{mark.is_final ? 'Yes' : 'No'}</td>
-                        <td>
+                        <td style={styles.td}>{mark.marks_obtained}</td>
+                        <td style={styles.td}>{maxMarks}</td>
+                        <td style={styles.td}>{percentage}%</td>
+                        <td style={styles.td}>{mark.exam_type}</td>
+                        <td style={styles.td}>{mark.semester || 'N/A'}</td>
+                        <td style={styles.td}>{mark.is_final ? 'Yes' : 'No'}</td>
+                        <td style={styles.td}>
                           <button
                             onClick={() => handleEdit(mark)}
                             style={styles.editButton}
@@ -373,6 +373,7 @@ const styles = {
   td: {
     padding: '12px',
     borderBottom: '1px solid #dee2e6',
+    textAlign: 'left',
   },
   editInput: {
     padding: '6px',
