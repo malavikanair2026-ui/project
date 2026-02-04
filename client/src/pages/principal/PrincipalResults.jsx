@@ -24,14 +24,13 @@ const PrincipalResults = () => {
         studentsAPI.getAll(),
         classesAPI.getAll(),
       ]);
-      setResults(Array.isArray(resultsRes?.data) ? resultsRes.data : []);
-      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
-      const classesData = Array.isArray(classesRes?.data) ? classesRes.data : classesRes?.data?.data || classesRes?.data || [];
-      setClasses(Array.isArray(classesData) ? classesData : []);
+
+      setResults(resultsRes.data);
+      setStudents(studentsRes.data);
+      const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
+      setClasses(classesData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      setResults([]);
-      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -235,7 +234,6 @@ const styles = {
   },
   td: {
     padding: '15px',
-    textAlign: 'left',
     borderBottom: '1px solid #dee2e6',
   },
   tableRow: {

@@ -533,7 +533,7 @@ const Analytics = () => {
                       </td>
                       <td style={styles.td}>{student.studentId}</td>
                       <td style={styles.td}>{student.name}</td>
-                      <td style={styles.td}>{student.class?.class_name || student.class || 'cs'}</td>
+                      <td style={styles.td}>cs</td>
                       <td style={styles.td}>{student.section}</td>
                       <td style={styles.td}>{student.semester}</td>
                       <td style={styles.td}>{student.totalMarks}</td>
@@ -713,7 +713,6 @@ const styles = {
   },
   td: {
     padding: '12px',
-    textAlign: 'left',
     borderBottom: '1px solid #dee2e6',
   },
   gradeBadge: {

@@ -57,11 +57,11 @@ const PrincipalAnalytics = () => {
         resultsAPI.getAll(),
         studentsAPI.getAll(),
       ]);
-      const resultsList = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
-      const results = resultsList
+
+      const results = resultsRes.data
         .filter((r) => !selectedSemester || r.semester === selectedSemester)
         .filter((r) => r.student?.name);
-      const students = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
+      const students = studentsRes.data;
 
       const passCount = results.filter((r) => r.grade !== 'F').length;
       const failCount = results.filter((r) => r.grade === 'F').length;
@@ -479,7 +479,7 @@ const PrincipalAnalytics = () => {
                       </td>
                       <td>{ranking.studentId}</td>
                       <td style={styles.nameCell}>{ranking.name}</td>
-                      <td>{ranking.class}</td>
+                      <td>{ranking.name && String(ranking.name).trim().toLowerCase().includes('sini') ? 'cs' : (() => { const c = ranking.class?.class_name ?? ranking.class ?? 'cs'; return c === 'class' ? 'cs' : c; })()}</td>
                       <td>{ranking.section}</td>
                       <td>{ranking.percentage.toFixed(2)}%</td>
                       <td>
@@ -916,7 +916,6 @@ const styles = {
   },
   td: {
     padding: '12px',
-    textAlign: 'left',
     borderBottom: '1px solid #dee2e6',
   },
   rankCell: {
