@@ -120,8 +120,8 @@ const TeacherQueries = () => {
             </p>
           </div>
         ) : (
-          filteredQueries.map((q) => (
-            <div key={q._id} style={styles.card}>
+          filteredQueries.map((q, index) => (
+            <div key={q._id ?? `query-${index}`} style={styles.card}>
               <div style={styles.cardHeader}>
                 <div>
                   <strong style={styles.studentName}>
