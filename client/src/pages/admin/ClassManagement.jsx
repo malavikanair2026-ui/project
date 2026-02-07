@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { classesAPI, subjectsAPI, usersAPI } from '../../services/api';
+import { classesAPI, subjectsAPI, usersAPI, departmentsAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const ClassManagement = () => {
   const [classes, setClasses] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +25,7 @@ const ClassManagement = () => {
   const [formData, setFormData] = useState({
     class_id: '',
     class_name: '',
+    department: '',
   });
   const [subjectFormData, setSubjectFormData] = useState({
     subject: '',
@@ -48,18 +50,20 @@ const ClassManagement = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [classesRes, subjectsRes, usersRes] = await Promise.all([
+      const [classesRes, departmentsRes, subjectsRes, usersRes] = await Promise.all([
         classesAPI.getAll(),
+        departmentsAPI.getAll(),
         subjectsAPI.getAll(),
         usersAPI.getAll(),
       ]);
       
-      // Handle response format - axios wraps responses in .data
       const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
+      const departmentsData = Array.isArray(departmentsRes.data) ? departmentsRes.data : departmentsRes.data?.data || departmentsRes.data || [];
       const subjectsData = Array.isArray(subjectsRes.data) ? subjectsRes.data : subjectsRes.data?.data || subjectsRes.data || [];
       const usersData = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.data || usersRes.data || [];
       
       setClasses(classesData);
+      setDepartments(departmentsData);
       setSubjects(subjectsData);
       setTeachers(usersData.filter((u) => u.role === 'teacher'));
       setError('');
@@ -113,7 +117,7 @@ const ClassManagement = () => {
       }
       setShowModal(false);
       setEditingClass(null);
-      setFormData({ class_id: '', class_name: '' });
+      setFormData({ class_id: '', class_name: '', department: '' });
       fetchData();
     } catch (error) {
       console.error('Submit error:', error);
@@ -145,11 +149,11 @@ const ClassManagement = () => {
   };
 
   const handleEdit = (classItem) => {
-    console.log('Editing class:', classItem);
     setEditingClass(classItem);
     setFormData({
       class_id: classItem.class_id,
       class_name: classItem.class_name,
+      department: classItem.department?._id || classItem.department || '',
     });
     setShowModal(true);
   };
@@ -225,9 +229,8 @@ const ClassManagement = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingClass(null);
-    setFormData({ class_id: '', class_name: '' });
+    setFormData({ class_id: '', class_name: '', department: '' });
     setError('');
-    console.log('Modal closed, form reset');
   };
 
   const handleCloseSubjectModal = () => {
@@ -386,6 +389,9 @@ const ClassManagement = () => {
               <h3 style={styles.className}>{classItem.class_name}</h3>
               <span style={styles.classId}>ID: {classItem.class_id}</span>
             </div>
+            {classItem.department && (
+              <p style={styles.deptName}>Department: {classItem.department?.department_name || classItem.department}</p>
+            )}
             <div style={styles.teachersList}>
               <h4 style={styles.teachersTitle}>Assigned Teachers:</h4>
               {classItem.class_teacher && (
@@ -584,6 +590,23 @@ const ClassManagement = () => {
               {editingClass ? 'Edit Class' : 'Add New Class'}
             </h3>
             <form onSubmit={handleSubmit}>
+              <div style={styles.formGroup}>
+                <label>Department (optional)</label>
+                <select
+                  name="department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                  style={styles.input}
+                >
+                  <option value="">No department</option>
+                  {departments.map((d) => (
+                    <option key={d._id} value={d._id}>
+                      {d.department_name} {d.department_code ? `(${d.department_code})` : ''}
+                      {d.course?.course_name ? ` - ${d.course.course_name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div style={styles.formGroup}>
                 <label>Class ID</label>
                 <input
@@ -990,6 +1013,11 @@ const styles = {
   classId: {
     color: '#7f8c8d',
     fontSize: '14px',
+  },
+  deptName: {
+    margin: '0 0 15px 0',
+    fontSize: '14px',
+    color: '#7f8c8d',
   },
   subjectsList: {
     marginTop: '15px',

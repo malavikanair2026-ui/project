@@ -45,11 +45,33 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
 };
 
-// Students API
+// Courses API (hierarchy: Course → Department → Class → Student)
+export const coursesAPI = {
+  getAll: () => api.get('/courses'),
+  getById: (id, includeDepartments = false) =>
+    api.get(`/courses/${id}`, { params: includeDepartments ? { include: 'departments' } : {} }),
+  create: (data) => api.post('/courses', data),
+  update: (id, data) => api.put(`/courses/${id}`, data),
+  delete: (id) => api.delete(`/courses/${id}`),
+};
+
+// Departments API
+export const departmentsAPI = {
+  getAll: (params = {}) => api.get('/departments', { params }),
+  getByCourseId: (courseId) => api.get(`/departments/course/${courseId}`),
+  getById: (id, includeClasses = false) =>
+    api.get(`/departments/${id}`, { params: includeClasses ? { include: 'classes' } : {} }),
+  create: (data) => api.post('/departments', data),
+  update: (id, data) => api.put(`/departments/${id}`, data),
+  delete: (id) => api.delete(`/departments/${id}`),
+};
+
+// Students API (supports filter by course, department, class, section)
 export const studentsAPI = {
-  getAll: () => api.get('/students'),
+  getAll: (params = {}) => api.get('/students', { params }),
   getById: (id) => api.get(`/students/${id}`),
   getByUserId: (userId) => api.get(`/students/user/${userId}`),
+  getByClassId: (classId, params = {}) => api.get(`/students/class/${classId}`, { params }),
   create: (data) => api.post('/students', data),
   update: (id, data) => api.put(`/students/${id}`, data),
   delete: (id) => api.delete(`/students/${id}`),
@@ -99,7 +121,7 @@ export const usersAPI = {
   delete: (id) => api.delete(`/users/${id}`),
 };
 
-// Classes API
+// Classes API (supports filter by department)
 export const classesAPI = {
   getAll: (params = {}) => api.get('/classes', { params }),
   getById: (id) => api.get(`/classes/${id}`),
@@ -147,35 +169,36 @@ export const gradingSchemaAPI = {
   delete: (id) => api.delete(`/grading-schemas/${id}`),
 };
 
-// Analytics API
+// Analytics API (supports filter by course, department, class)
 export const analyticsAPI = {
-  getClassPerformance: (semester) => {
-    const params = semester ? { semester } : {};
+  getClassPerformance: (semester, filters = {}) => {
+    const params = { ...filters };
+    if (semester) params.semester = semester;
     return api.get('/analytics/class-performance', { params });
   },
-  getSectionPerformance: (semester) => {
-    const params = semester ? { semester } : {};
+  getSectionPerformance: (semester, filters = {}) => {
+    const params = { ...filters };
+    if (semester) params.semester = semester;
     return api.get('/analytics/section-performance', { params });
   },
-  getSubjectAnalysis: (semester) => {
-    const params = semester ? { semester } : {};
+  getSubjectAnalysis: (semester, filters = {}) => {
+    const params = { ...filters };
+    if (semester) params.semester = semester;
     return api.get('/analytics/subject-analysis', { params });
   },
-  getRankings: (semester, className) => {
-    const params = {};
+  getRankings: (semester, filters = {}) => {
+    const params = { ...filters };
     if (semester) params.semester = semester;
-    if (className) params.class = className;
     return api.get('/analytics/rankings', { params });
   },
-  getToppers: (limit = 10, semester) => {
-    const params = { limit };
+  getToppers: (limit = 10, semester, filters = {}) => {
+    const params = { limit, ...filters };
     if (semester) params.semester = semester;
     return api.get('/analytics/toppers', { params });
   },
-  getPassFail: (semester, className) => {
-    const params = {};
+  getPassFail: (semester, filters = {}) => {
+    const params = { ...filters };
     if (semester) params.semester = semester;
-    if (className) params.class = className;
     return api.get('/analytics/pass-fail', { params });
   },
 };

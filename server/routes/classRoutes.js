@@ -3,20 +3,34 @@ const ClassModel = require('../models/Class');
 
 const router = express.Router();
 
-// Create class
+// Create class (department optional for backward compatibility)
 router.post('/', async (req, res) => {
   try {
+    if (req.body.department) {
+      const Department = require('../models/Department');
+      const deptExists = await Department.findById(req.body.department);
+      if (!deptExists) {
+        return res.status(400).json({ message: 'Department not found' });
+      }
+    }
     const classDoc = await ClassModel.create(req.body);
-    res.status(201).json(classDoc);
+    const populated = await ClassModel.findById(classDoc._id)
+      .populate('department', 'department_name department_code course');
+    res.status(201).json(populated);
   } catch (err) {
     res.status(400).json({ message: err.message || 'Failed to create class' });
   }
 });
 
-// Get all classes (optionally filter by teacher)
+// Get all classes (optionally filter by department or teacher)
 router.get('/', async (req, res) => {
   try {
-    const classes = await ClassModel.find().populate('subjects.subject subjects.teacher')
+    const query = {};
+    if (req.query.department) query.department = req.query.department;
+
+    const classes = await ClassModel.find(query)
+      .populate('department', 'department_name department_code course')
+      .populate('subjects.subject subjects.teacher')
       .populate('class_teacher', 'name email')
       .populate('assigned_teachers', 'name email');
 
@@ -46,6 +60,7 @@ router.get('/', async (req, res) => {
 router.get('/:classId', async (req, res) => {
   try {
     const classDoc = await ClassModel.findById(req.params.classId)
+      .populate('department', 'department_name department_code course')
       .populate('subjects.subject subjects.teacher')
       .populate('class_teacher', 'name email')
       .populate('assigned_teachers', 'name email');
@@ -81,10 +96,20 @@ router.post('/:classId/subjects', async (req, res) => {
 // Update class info
 router.put('/:classId', async (req, res) => {
   try {
+    if (req.body.department !== undefined) {
+      const Department = require('../models/Department');
+      if (req.body.department) {
+        const deptExists = await Department.findById(req.body.department);
+        if (!deptExists) {
+          return res.status(400).json({ message: 'Department not found' });
+        }
+      }
+    }
     const updated = await ClassModel.findByIdAndUpdate(req.params.classId, req.body, {
       new: true,
       runValidators: true,
     })
+      .populate('department', 'department_name department_code course')
       .populate('subjects.subject subjects.teacher')
       .populate('class_teacher', 'name email')
       .populate('assigned_teachers', 'name email');

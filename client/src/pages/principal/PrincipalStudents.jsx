@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { studentsAPI, resultsAPI, classesAPI } from '../../services/api';
+import { studentsAPI, resultsAPI, classesAPI, coursesAPI, departmentsAPI } from '../../services/api';
 import { usePrincipal } from '../../context/PrincipalContext';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -10,7 +10,11 @@ const PrincipalStudents = () => {
   const [students, setStudents] = useState([]);
   const [results, setResults] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClasses, setExpandedClasses] = useState({});
@@ -23,20 +27,23 @@ const PrincipalStudents = () => {
 
   const fetchData = async () => {
     try {
-      const [studentsRes, resultsRes, classesRes] = await Promise.all([
+      const [studentsRes, resultsRes, classesRes, coursesRes, departmentsRes] = await Promise.all([
         studentsAPI.getAll(),
         resultsAPI.getAll(),
         classesAPI.getAll(),
+        coursesAPI.getAll(),
+        departmentsAPI.getAll(),
       ]);
-      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
-      setResults(Array.isArray(resultsRes?.data) ? resultsRes.data : []);
-      const classesData = Array.isArray(classesRes?.data) ? classesRes.data : classesRes?.data?.data || classesRes?.data || [];
-      setClasses(Array.isArray(classesData) ? classesData : []);
+
+      setStudents(studentsRes.data);
+      setResults(resultsRes.data);
+      const classesData = Array.isArray(classesRes.data) ? classesRes.data : classesRes.data?.data || classesRes.data || [];
+      setClasses(classesData);
+      setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : coursesRes.data?.data || []);
+      setDepartments(Array.isArray(departmentsRes.data) ? departmentsRes.data : departmentsRes.data?.data || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load students', 'error');
-      setStudents([]);
-      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -45,27 +52,28 @@ const PrincipalStudents = () => {
   const getFilteredStudents = () => {
     let filtered = students;
 
-    // Filter by class
+    if (filterCourse) {
+      filtered = filtered.filter((s) => (s.course?._id || s.course) === filterCourse);
+    }
+    if (filterDepartment) {
+      filtered = filtered.filter((s) => (s.department?._id || s.department) === filterDepartment);
+    }
     if (filterClass) {
       filtered = filtered.filter((s) => {
         const studentClassName = s.class?.class_name || s.class;
         return studentClassName === filterClass;
       });
     }
-
-    // Filter by section (from layout - same as Class Management source)
     if (selectedSection) {
       filtered = filtered.filter((s) => s.section === selectedSection);
     }
-
-    // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (s) =>
           s.name?.toLowerCase().includes(term) ||
           s.student_id?.toLowerCase().includes(term) ||
-          s.class?.toLowerCase().includes(term)
+          (s.class?.class_name || s.class)?.toLowerCase?.()?.includes?.(term)
       );
     }
 
@@ -141,6 +149,26 @@ const PrincipalStudents = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             style={styles.searchInput}
           />
+          <select
+            value={filterCourse}
+            onChange={(e) => { setFilterCourse(e.target.value); setFilterDepartment(''); }}
+            style={styles.select}
+          >
+            <option value="">All Courses</option>
+            {courses.map((c) => (
+              <option key={c._id} value={c._id}>{c.course_name} {c.course_code ? `(${c.course_code})` : ''}</option>
+            ))}
+          </select>
+          <select
+            value={filterDepartment}
+            onChange={(e) => setFilterDepartment(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Departments</option>
+            {(filterCourse ? departments.filter((d) => (d.course?._id || d.course) === filterCourse) : departments).map((d) => (
+              <option key={d._id} value={d._id}>{d.department_name} {d.department_code ? `(${d.department_code})` : ''}</option>
+            ))}
+          </select>
           <select
             value={filterClass}
             onChange={(e) => setFilterClass(e.target.value)}
@@ -383,7 +411,6 @@ const styles = {
   },
   td: {
     padding: '12px',
-    textAlign: 'left',
     borderBottom: '1px solid #dee2e6',
   },
   nameCell: {

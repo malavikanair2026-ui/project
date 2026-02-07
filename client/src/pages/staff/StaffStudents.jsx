@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { studentsAPI, marksAPI } from '../../services/api';
+import { studentsAPI, marksAPI, coursesAPI, departmentsAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const StaffStudents = () => {
   const [students, setStudents] = useState([]);
   const [marksByStudent, setMarksByStudent] = useState({});
+  const [courses, setCourses] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [filterSection, setFilterSection] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,9 +25,15 @@ const StaffStudents = () => {
 
   const fetchData = async () => {
     try {
-      const studentsRes = await studentsAPI.getAll();
+      const [studentsRes, coursesRes, departmentsRes] = await Promise.all([
+        studentsAPI.getAll(),
+        coursesAPI.getAll(),
+        departmentsAPI.getAll(),
+      ]);
       const studentList = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
       setStudents(studentList);
+      setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : coursesRes.data?.data || []);
+      setDepartments(Array.isArray(departmentsRes.data) ? departmentsRes.data : departmentsRes.data?.data || []);
 
       const ids = studentList.map((s) => s._id).filter(Boolean);
       if (ids.length > 0) {
@@ -45,24 +55,28 @@ const StaffStudents = () => {
   const getFilteredStudents = () => {
     let filtered = students;
 
+    if (filterCourse) {
+      filtered = filtered.filter((s) => (s.course?._id || s.course) === filterCourse);
+    }
+    if (filterDepartment) {
+      filtered = filtered.filter((s) => (s.department?._id || s.department) === filterDepartment);
+    }
     if (filterClass) {
       filtered = filtered.filter((s) => {
         const studentClassName = s.class?.class_name || s.class;
         return studentClassName === filterClass;
       });
     }
-
     if (filterSection) {
       filtered = filtered.filter((s) => s.section === filterSection);
     }
-
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (s) =>
           s.name?.toLowerCase().includes(term) ||
           s.student_id?.toLowerCase().includes(term) ||
-          s.class?.toLowerCase().includes(term)
+          (s.class?.class_name || s.class)?.toLowerCase?.()?.includes?.(term)
       );
     }
 
@@ -138,10 +152,30 @@ const StaffStudents = () => {
             style={styles.searchInput}
           />
           <select
+            value={filterCourse}
+            onChange={(e) => { setFilterCourse(e.target.value); setFilterDepartment(''); }}
+            style={styles.select}
+          >
+            <option value="">All Courses</option>
+            {courses.map((c) => (
+              <option key={c._id} value={c._id}>{c.course_name} {c.course_code ? `(${c.course_code})` : ''}</option>
+            ))}
+          </select>
+          <select
+            value={filterDepartment}
+            onChange={(e) => setFilterDepartment(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Departments</option>
+            {(filterCourse ? departments.filter((d) => (d.course?._id || d.course) === filterCourse) : departments).map((d) => (
+              <option key={d._id} value={d._id}>{d.department_name} {d.department_code ? `(${d.department_code})` : ''}</option>
+            ))}
+          </select>
+          <select
             value={filterClass}
             onChange={(e) => {
               setFilterClass(e.target.value);
-              setFilterSection(''); // Reset section when class changes
+              setFilterSection('');
             }}
             style={styles.select}
           >

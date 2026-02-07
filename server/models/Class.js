@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+/**
+ * Class entity: belongs to a Department (e.g., CSE-A, CSE-B).
+ * Hierarchy: Course → Department → Class → Student
+ * department is optional for backward compatibility with existing classes.
+ */
 const classSchema = new mongoose.Schema(
   {
     class_id: {
@@ -12,6 +17,12 @@ const classSchema = new mongoose.Schema(
       required: [true, 'Please provide class name'],
       trim: true,
       unique: true,
+    },
+    // Department under which this class falls. Optional for backward compatibility.
+    department: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Department',
+      default: null,
     },
     subjects: [
       {

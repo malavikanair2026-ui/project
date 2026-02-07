@@ -1,6 +1,8 @@
 const express = require('express');
 const Student = require('../models/Student');
 const Class = require('../models/Class');
+const Course = require('../models/Course');
+const Department = require('../models/Department');
 const Marks = require('../models/Marks');
 const Result = require('../models/Result');
 const Feedback = require('../models/Feedback');
@@ -10,63 +12,56 @@ const User = require('../models/User');
 
 const router = express.Router();
 
-// Create student
+// Helper: populate student with course, department, class, user
+const populateStudent = (q) =>
+  q
+    .populate('course', 'course_name course_code')
+    .populate('department', 'department_name department_code')
+    .populate('class', 'class_name')
+    .populate('user', 'name email');
+
+// Create student (validates class; optionally course/department for hierarchy)
 router.post('/', async (req, res) => {
   try {
-    // Resolve class: accept ObjectId or class name
-    let classId = req.body.class;
-    if (classId) {
-      const isObjectId = /^[0-9a-fA-F]{24}$/.test(classId);
-      if (isObjectId) {
-        const classExists = await Class.findById(classId);
-        if (!classExists) {
-          return res.status(400).json({ message: 'Class not found' });
-        }
-      } else {
-        const nameTrimmed = String(classId).trim();
-        const escaped = nameTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        let byName = await Class.findOne({
-          class_name: { $regex: new RegExp(`^${escaped}$`, 'i') },
-        });
-        // If class "cs" is requested but doesn't exist, create it so Add Student works
-        if (!byName && /^cs$/i.test(nameTrimmed)) {
-          const maxClass = await Class.findOne().sort({ class_id: -1 }).select('class_id').lean();
-          const nextClassId = (maxClass?.class_id ?? 0) + 1;
-          byName = await Class.create({
-            class_id: nextClassId,
-            class_name: 'CS',
-          });
-        }
-        if (!byName) {
-          return res.status(400).json({ message: `Class "${classId}" not found. Please select a class from the list.` });
-        }
-        classId = byName._id;
+    if (req.body.class) {
+      const classExists = await Class.findById(req.body.class);
+      if (!classExists) {
+        return res.status(400).json({ message: 'Class not found' });
       }
     }
-    const body = { ...req.body, class: classId };
+    if (req.body.course) {
+      const courseExists = await Course.findById(req.body.course);
+      if (!courseExists) {
+        return res.status(400).json({ message: 'Course not found' });
+      }
+    }
+    if (req.body.department) {
+      const deptExists = await Department.findById(req.body.department);
+      if (!deptExists) {
+        return res.status(400).json({ message: 'Department not found' });
+      }
+    }
 
-    const student = await Student.create(body);
-    const populatedStudent = await Student.findById(student._id)
-      .populate('class', 'class_name')
-      .populate('user', 'name email');
-    res.status(201).json(populatedStudent);
+    const student = await Student.create(req.body);
+    const populatedStudent = await populateStudent(Student.findById(student._id));
+    res.status(201).json(await populatedStudent);
   } catch (err) {
     res.status(400).json({ message: err.message || 'Failed to create student' });
   }
 });
 
-// Get all students (optionally filter by class and/or section)
+// Get all students (optionally filter by course, department, class, section)
 router.get('/', async (req, res) => {
   try {
     const query = {};
-    if (req.query.class) {
-      query.class = req.query.class;
-    }
-    if (req.query.section) {
-      query.section = req.query.section;
-    }
+    if (req.query.course) query.course = req.query.course;
+    if (req.query.department) query.department = req.query.department;
+    if (req.query.class) query.class = req.query.class;
+    if (req.query.section) query.section = req.query.section;
 
     const students = await Student.find(query)
+      .populate('course', 'course_name course_code')
+      .populate('department', 'department_name department_code')
       .populate('class', 'class_name')
       .populate('user', 'name email')
       .sort({ createdAt: -1 });
@@ -80,11 +75,11 @@ router.get('/', async (req, res) => {
 router.get('/class/:classId', async (req, res) => {
   try {
     const query = { class: req.params.classId };
-    if (req.query.section) {
-      query.section = req.query.section;
-    }
+    if (req.query.section) query.section = req.query.section;
 
     const students = await Student.find(query)
+      .populate('course', 'course_name course_code')
+      .populate('department', 'department_name department_code')
       .populate('class', 'class_name')
       .populate('user', 'name email')
       .sort({ student_id: 1, name: 1 });
@@ -98,6 +93,8 @@ router.get('/class/:classId', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const student = await Student.findOne({ user: req.params.userId })
+      .populate('course', 'course_name course_code')
+      .populate('department', 'department_name department_code')
       .populate('class', 'class_name')
       .populate('user', 'name email');
     if (!student) return res.status(404).json({ message: 'Student not found' });
@@ -111,6 +108,8 @@ router.get('/user/:userId', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const student = await Student.findById(req.params.id)
+      .populate('course', 'course_name course_code')
+      .populate('department', 'department_name department_code')
       .populate('class', 'class_name')
       .populate('user', 'name email');
     if (!student) return res.status(404).json({ message: 'Student not found' });
@@ -123,18 +122,25 @@ router.get('/:id', async (req, res) => {
 // Update student
 router.put('/:id', async (req, res) => {
   try {
-    // Validate that the class exists if being updated
     if (req.body.class) {
       const classExists = await Class.findById(req.body.class);
-      if (!classExists) {
-        return res.status(400).json({ message: 'Class not found' });
-      }
+      if (!classExists) return res.status(400).json({ message: 'Class not found' });
+    }
+    if (req.body.course) {
+      const courseExists = await Course.findById(req.body.course);
+      if (!courseExists) return res.status(400).json({ message: 'Course not found' });
+    }
+    if (req.body.department) {
+      const deptExists = await Department.findById(req.body.department);
+      if (!deptExists) return res.status(400).json({ message: 'Department not found' });
     }
 
     const student = await Student.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     })
+      .populate('course', 'course_name course_code')
+      .populate('department', 'department_name department_code')
       .populate('class', 'class_name')
       .populate('user', 'name email');
     if (!student) return res.status(404).json({ message: 'Student not found' });

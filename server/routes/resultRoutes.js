@@ -55,11 +55,18 @@ router.post('/calculate/:studentId', async (req, res) => {
   }
 });
 
-// Get all results (populate student and student's class for analytics)
-router.get('/', async (_req, res) => {
+// Get all results (populate student with course, department, class for analytics)
+router.get('/', async (req, res) => {
   try {
     const results = await Result.find()
-      .populate({ path: 'student', populate: { path: 'class', select: 'class_name' } })
+      .populate({
+        path: 'student',
+        populate: [
+          { path: 'course', select: 'course_name course_code' },
+          { path: 'department', select: 'department_name department_code' },
+          { path: 'class', select: 'class_name' },
+        ],
+      })
       .sort({ semester: -1, percentage: -1 });
     res.json(results);
   } catch (err) {

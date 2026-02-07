@@ -4,18 +4,28 @@ const Result = require('../models/Result');
 const Student = require('../models/Student');
 const Marks = require('../models/Marks');
 const Subject = require('../models/Subject');
-
 const Class = require('../models/Class');
 
-// Get class-wise performance with section-wise breakdown
+// Build student filter from hierarchy query params (course, department, class)
+const studentFilterFromQuery = (query) => {
+  const filter = {};
+  if (query.course) filter.course = query.course;
+  if (query.department) filter.department = query.department;
+  if (query.class) filter.class = query.class;
+  return filter;
+};
+
+// Get class-wise performance with section-wise breakdown (supports filter by course, department, class)
 router.get('/class-performance', async (req, res) => {
   try {
-    const { semester } = req.query;
+    const { semester, course, department, class: classId } = req.query;
     const filter = {};
     if (semester) filter.semester = semester;
 
+    const studentFilter = studentFilterFromQuery(req.query);
+
     const results = await Result.find(filter).populate('student');
-    const students = await Student.find().populate('class');
+    const students = await Student.find(studentFilter).populate('class').populate('course').populate('department');
     const classes = await Class.find();
 
     const classMap = {};
@@ -122,15 +132,17 @@ router.get('/class-performance', async (req, res) => {
   }
 });
 
-// Get section-wise performance
+// Get section-wise performance (supports filter by course, department, class)
 router.get('/section-performance', async (req, res) => {
   try {
     const { semester } = req.query;
     const filter = {};
     if (semester) filter.semester = semester;
 
+    const studentFilter = studentFilterFromQuery(req.query);
+
     const results = await Result.find(filter).populate('student');
-    const students = await Student.find().populate('class');
+    const students = await Student.find(studentFilter).populate('class');
 
     const sectionPerformance = {};
 
@@ -190,12 +202,21 @@ router.get('/section-performance', async (req, res) => {
   }
 });
 
-// Get subject-wise analysis
+// Get subject-wise analysis (supports filter by course, department, class via student)
 router.get('/subject-analysis', async (req, res) => {
   try {
     const { semester } = req.query;
     const filter = {};
     if (semester) filter.semester = semester;
+
+    const studentFilter = studentFilterFromQuery(req.query);
+    let studentIds = null;
+    if (Object.keys(studentFilter).length > 0) {
+      const students = await Student.find(studentFilter).select('_id');
+      studentIds = students.map((s) => s._id);
+      if (studentIds.length === 0) return res.json({});
+      filter.student = { $in: studentIds };
+    }
 
     const marks = await Marks.find(filter).populate('subject').populate('student');
     const subjects = await Subject.find();
@@ -264,27 +285,35 @@ router.get('/subject-analysis', async (req, res) => {
   }
 });
 
-// Get full ranking (all students)
+// Get full ranking (all students; filter by course, department, class)
 router.get('/rankings', async (req, res) => {
   try {
-    const { semester, class: className } = req.query;
+    const { semester, course, department, class: classId } = req.query;
     const filter = {};
     if (semester) filter.semester = semester;
 
+    const studentFilter = studentFilterFromQuery(req.query);
+
     const results = await Result.find(filter).populate('student');
-    const students = await Student.find();
+    const students = await Student.find(studentFilter)
+      .populate('course', 'course_name')
+      .populate('department', 'department_name')
+      .populate('class', 'class_name');
 
     let rankings = results
-      .filter((result) => result.student) // Exclude orphaned results
+      .filter((result) => result.student)
       .map((result) => {
         const student = students.find(
           (s) => s._id.toString() === result.student?._id?.toString() || s._id.toString() === result.student?.toString()
         );
+        if (!student) return null;
         return {
           rank: 0,
           studentId: student?.student_id ?? '-',
           name: student?.name ?? '-',
-          class: student?.class ?? 'cs',
+          course: student?.course?.course_name ?? student?.course ?? '-',
+          department: student?.department?.department_name ?? student?.department ?? '-',
+          class: student?.class?.class_name ?? student?.class ?? 'cs',
           section: student?.section || '',
           semester: result.semester,
           totalMarks: result.total_marks,
@@ -294,12 +323,7 @@ router.get('/rankings', async (req, res) => {
           status: result.status,
         };
       })
-      .filter((r) => r.name && r.name !== '-'); // Remove details of unknown
-
-    // Filter by class if specified
-    if (className) {
-      rankings = rankings.filter((r) => r.class === className);
-    }
+      .filter((r) => r && r.name && r.name !== '-');
 
     // Sort by percentage descending
     rankings.sort((a, b) => b.percentage - a.percentage);
@@ -320,25 +344,35 @@ router.get('/rankings', async (req, res) => {
   }
 });
 
-// Get toppers list
+// Get toppers list (supports filter by course, department, class)
 router.get('/toppers', async (req, res) => {
   try {
-    const { limit = 10, semester } = req.query;
+    const { limit = 10, semester, course, department, class: classId } = req.query;
     const filter = {};
     if (semester) filter.semester = semester;
 
+    const studentFilter = studentFilterFromQuery(req.query);
+    if (Object.keys(studentFilter).length > 0) {
+      const students = await Student.find(studentFilter).select('_id');
+      const ids = students.map((s) => s._id);
+      if (ids.length === 0) return res.json([]);
+      filter.student = { $in: ids };
+    }
+
     const results = await Result.find(filter)
-      .populate('student')
+      .populate({ path: 'student', populate: [{ path: 'course' }, { path: 'department' }, { path: 'class' }] })
       .sort({ percentage: -1 })
       .limit(parseInt(limit));
 
     const toppers = results
-      .filter((result) => result.student && result.student?.name) // Remove details of unknown
+      .filter((result) => result.student && result.student?.name)
       .map((result, index) => ({
         rank: index + 1,
         studentId: result.student?.student_id ?? '-',
         name: result.student?.name ?? '-',
-        class: result.student?.class ?? 'cs',
+        course: result.student?.course?.course_name ?? result.student?.course ?? '-',
+        department: result.student?.department?.department_name ?? result.student?.department ?? '-',
+        class: result.student?.class?.class_name ?? result.student?.class ?? 'cs',
         section: result.student?.section || '',
         percentage: result.percentage,
         grade: result.grade,
@@ -352,18 +386,18 @@ router.get('/toppers', async (req, res) => {
   }
 });
 
-// Get pass/fail statistics
+// Get pass/fail statistics (supports filter by course, department, class)
 router.get('/pass-fail', async (req, res) => {
   try {
-    const { semester, class: className } = req.query;
+    const { semester } = req.query;
     const filter = {};
     if (semester) filter.semester = semester;
 
-    let results = await Result.find(filter).populate('student');
+    const studentFilter = studentFilterFromQuery(req.query);
 
-    // Filter by class if specified
-    if (className) {
-      const students = await Student.find({ class: className });
+    let results = await Result.find(filter).populate('student');
+    if (Object.keys(studentFilter).length > 0) {
+      const students = await Student.find(studentFilter).select('_id');
       const studentIds = students.map((s) => s._id.toString());
       results = results.filter((r) => {
         const studentId = r.student?._id?.toString() || r.student?.toString();

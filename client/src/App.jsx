@@ -9,6 +9,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import StudentManagement from './pages/admin/StudentManagement';
 import SubjectManagement from './pages/admin/SubjectManagement';
+import CourseManagement from './pages/admin/CourseManagement';
+import DepartmentManagement from './pages/admin/DepartmentManagement';
 import ClassManagement from './pages/admin/ClassManagement';
 import ResultsView from './pages/admin/ResultsView';
 import Analytics from './pages/admin/Analytics';
@@ -88,6 +90,26 @@ function App() {
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminLayout>
                 <StudentManagement />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/courses"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout>
+                <CourseManagement />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/departments"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout>
+                <DepartmentManagement />
               </AdminLayout>
             </ProtectedRoute>
           }

@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
-import { studentsAPI, usersAPI, classesAPI } from '../../services/api';
+import { studentsAPI, usersAPI, classesAPI, coursesAPI, departmentsAPI } from '../../services/api';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
   const [users, setUsers] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSection, setSelectedSection] = useState('all');
   const [expandedClasses, setExpandedClasses] = useState(new Set());
@@ -16,6 +20,8 @@ const StudentManagement = () => {
     student_id: '',
     user: '',
     name: '',
+    course: '',
+    department: '',
     class: '',
     section: '',
     dob: '',
@@ -28,16 +34,18 @@ const StudentManagement = () => {
 
   const fetchData = async () => {
     try {
-      const [studentsRes, usersRes, classesRes] = await Promise.all([
+      const [studentsRes, usersRes, classesRes, coursesRes, departmentsRes] = await Promise.all([
         studentsAPI.getAll(),
         usersAPI.getAll(),
         classesAPI.getAll(),
+        coursesAPI.getAll(),
+        departmentsAPI.getAll(),
       ]);
       setStudents(studentsRes.data);
       setUsers(usersRes.data.filter((u) => u.role === 'student'));
       setClasses(classesRes.data);
-      
-      // Expand all classes by default
+      setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : coursesRes.data?.data || []);
+      setDepartments(Array.isArray(departmentsRes.data) ? departmentsRes.data : departmentsRes.data?.data || []);
       const allClassNames = [...new Set(
         studentsRes.data
           .map(s => s.class?.class_name || s.class?._id || 'CS')
@@ -63,20 +71,21 @@ const StudentManagement = () => {
     e.preventDefault();
     setError('');
 
-    try {
-      // When adding, formData.class is text (e.g. "cs"); server resolves to ObjectId. When editing, it's _id.
-      const classVal = (formData.class || '').trim();
-      if (!classVal) {
-        setError('Please enter a class');
-        return;
-      }
-      const submitData = {
-        ...formData,
-        class: editingStudent ? formData.class : classVal,
-        student_id: Number(formData.student_id),
-        dob: formData.dob ? new Date(formData.dob) : null,
-      };
+    const classVal = (formData.class || '').trim();
+    if (!classVal) {
+      setError('Please select a class');
+      return;
+    }
+    const submitData = {
+      ...formData,
+      class: formData.class,
+      course: formData.course || undefined,
+      department: formData.department || undefined,
+      student_id: Number(formData.student_id),
+      dob: formData.dob ? new Date(formData.dob) : null,
+    };
 
+    try {
       if (editingStudent) {
         await studentsAPI.update(editingStudent._id, submitData);
       } else {
@@ -88,6 +97,8 @@ const StudentManagement = () => {
         student_id: '',
         user: '',
         name: '',
+        course: '',
+        department: '',
         class: '',
         section: '',
         dob: '',
@@ -104,6 +115,8 @@ const StudentManagement = () => {
       student_id: student.student_id,
       user: student.user?._id || student.user || '',
       name: student.name,
+      course: student.course?._id || student.course || '',
+      department: student.department?._id || student.department || '',
       class: student.class?._id || student.class || '',
       section: student.section,
       dob: student.dob ? new Date(student.dob).toISOString().split('T')[0] : '',
@@ -136,12 +149,24 @@ const StudentManagement = () => {
       student_id: '',
       user: '',
       name: '',
+      course: '',
+      department: '',
       class: '',
       section: '',
       dob: '',
     });
     setError('');
   };
+
+  // Dependent dropdowns: classes filtered by selected department in form
+  const formDepartmentId = formData.department;
+  const formCourseId = formData.course;
+  const classesForForm = formDepartmentId
+    ? classes.filter((c) => (c.department?._id || c.department) === formDepartmentId)
+    : classes;
+  const departmentsForForm = formCourseId
+    ? departments.filter((d) => (d.course?._id || d.course) === formCourseId)
+    : departments;
 
   const toggleClass = (className) => {
     const newExpanded = new Set(expandedClasses);
@@ -153,34 +178,40 @@ const StudentManagement = () => {
     setExpandedClasses(newExpanded);
   };
 
-  // Filter students by section if selected
-  const filteredStudents = selectedSection === 'all' 
-    ? students 
-    : students.filter(s => s.section === selectedSection);
+  // Filter students by course, department, class, section
+  let filteredStudents = students;
+  if (selectedCourse !== 'all') {
+    filteredStudents = filteredStudents.filter((s) => (s.course?._id || s.course) === selectedCourse);
+  }
+  if (selectedDepartment !== 'all') {
+    filteredStudents = filteredStudents.filter((s) => (s.department?._id || s.department) === selectedDepartment);
+  }
+  if (selectedClass !== 'all') {
+    filteredStudents = filteredStudents.filter((s) => String(s.class?._id || s.class) === String(selectedClass));
+  }
+  if (selectedSection !== 'all') {
+    filteredStudents = filteredStudents.filter((s) => s.section === selectedSection);
+  }
 
-  // Group students by class
+  // Group students by class (key = class name for display)
   const groupedStudents = filteredStudents.reduce((acc, student) => {
     const className = student.class?.class_name || student.class?._id || 'CS';
-    if (!acc[className]) {
-      acc[className] = [];
-    }
+    if (!acc[className]) acc[className] = [];
     acc[className].push(student);
     return acc;
   }, {});
 
-  // Get all unique class names
   const allClassNames = Object.keys(groupedStudents).sort();
+  const displayClasses = selectedClass === 'all'
+    ? allClassNames
+    : (() => {
+        const cls = classes.find((c) => String(c._id) === String(selectedClass));
+        const name = cls?.class_name;
+        return name && groupedStudents[name] ? [name] : name ? [name] : [];
+      })();
 
-  // Filter classes based on selection
-  const displayClasses = selectedClass === 'all' 
-    ? allClassNames 
-    : allClassNames.filter(c => c === selectedClass);
-
-  // Get class options for dropdown (from classes table)
-  const classOptions = classes.map(c => ({
-    _id: c._id,
-    class_name: c.class_name
-  }));
+  // Class options for form: filtered by selected department (dependent dropdown)
+  const classOptions = classesForForm.map((c) => ({ _id: c._id, class_name: c.class_name }));
 
   // When adding, only show users with role student who don't already have a student record
   const linkedUserIds = new Set(
@@ -206,7 +237,9 @@ const StudentManagement = () => {
               student_id: '',
               user: '',
               name: '',
-              class: 'cs',
+              course: '',
+              department: '',
+              class: '',
               section: '',
               dob: '',
             });
@@ -220,27 +253,64 @@ const StudentManagement = () => {
 
       {error && <div style={styles.error}>{error}</div>}
 
-      {/* Filters */}
+      {/* Filters: Course → Department → Class → Section */}
       <div style={styles.filterContainer}>
-        <label style={styles.filterLabel}>Filter by Class:</label>
+        <label style={styles.filterLabel}>Course:</label>
+        <select
+          value={selectedCourse}
+          onChange={(e) => { setSelectedCourse(e.target.value); setSelectedDepartment('all'); setSelectedClass('all'); }}
+          style={styles.filterSelect}
+        >
+          <option value="all">All Courses</option>
+          {courses.map((c) => (
+            <option key={c._id} value={c._id}>{c.course_name} {c.course_code ? `(${c.course_code})` : ''}</option>
+          ))}
+        </select>
+        <label style={styles.filterLabel}>Department:</label>
+        <select
+          value={selectedDepartment}
+          onChange={(e) => { setSelectedDepartment(e.target.value); setSelectedClass('all'); }}
+          style={styles.filterSelect}
+        >
+          <option value="all">All Departments</option>
+          {(selectedCourse === 'all' ? departments : departments.filter((d) => (d.course?._id || d.course) === selectedCourse)).map((d) => (
+            <option key={d._id} value={d._id}>{d.department_name} {d.department_code ? `(${d.department_code})` : ''}</option>
+          ))}
+        </select>
+        <label style={styles.filterLabel}>Class:</label>
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
           style={styles.filterSelect}
         >
           <option value="all">All Classes</option>
-          {allClassNames.map((className) => {
-            const displayName = className === 'CS' 
-              ? 'CS' 
-              : (classes.find(c => c._id === className || c.class_name === className)?.class_name || className);
-            return (
-              <option key={className} value={className}>
-                {displayName} ({groupedStudents[className]?.length || 0} students)
-              </option>
-            );
-          })}
+          {(() => {
+            let classesFiltered = classes;
+            if (selectedDepartment !== 'all') {
+              classesFiltered = classes.filter((c) => String(c.department?._id || c.department) === String(selectedDepartment));
+            } else if (selectedCourse !== 'all') {
+              const deptIds = departments.filter((d) => String(d.course?._id || d.course) === String(selectedCourse)).map((d) => d._id);
+              classesFiltered = classes.filter((c) => deptIds.includes(c.department?._id || c.department));
+            }
+            const studentsBeforeClassFilter = selectedCourse !== 'all' || selectedDepartment !== 'all' || selectedSection !== 'all'
+              ? students.filter((s) => {
+                  if (selectedCourse !== 'all' && (s.course?._id || s.course) !== selectedCourse) return false;
+                  if (selectedDepartment !== 'all' && (s.department?._id || s.department) !== selectedDepartment) return false;
+                  if (selectedSection !== 'all' && s.section !== selectedSection) return false;
+                  return true;
+                })
+              : students;
+            return classesFiltered.map((c) => {
+              const count = studentsBeforeClassFilter.filter((s) => String(s.class?._id || s.class) === String(c._id)).length;
+              return (
+                <option key={c._id} value={c._id}>
+                  {c.class_name} ({count} students)
+                </option>
+              );
+            });
+          })()}
         </select>
-        <label style={styles.filterLabel}>Filter by Section:</label>
+        <label style={styles.filterLabel}>Section:</label>
         <select
           value={selectedSection}
           onChange={(e) => setSelectedSection(e.target.value)}
@@ -423,33 +493,57 @@ const StudentManagement = () => {
                 />
               </div>
               <div style={styles.formGroup}>
+                <label>Course</label>
+                <select
+                  name="course"
+                  value={formData.course}
+                  onChange={(e) => {
+                    handleInputChange(e);
+                    setFormData((prev) => ({ ...prev, department: '', class: '' }));
+                  }}
+                  style={styles.input}
+                >
+                  <option value="">Select Course (optional)</option>
+                  {courses.map((c) => (
+                    <option key={c._id} value={c._id}>{c.course_name} {c.course_code ? `(${c.course_code})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label>Department</label>
+                <select
+                  name="department"
+                  value={formData.department}
+                  onChange={(e) => {
+                    handleInputChange(e);
+                    setFormData((prev) => ({ ...prev, class: '' }));
+                  }}
+                  style={styles.input}
+                >
+                  <option value="">Select Department (optional)</option>
+                  {departmentsForForm.map((d) => (
+                    <option key={d._id} value={d._id}>{d.department_name} {d.department_code ? `(${d.department_code})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
                 <label>Class</label>
-                {editingStudent ? (
-                  <select
-                    name="class"
-                    value={formData.class}
-                    onChange={handleInputChange}
-                    required
-                    style={styles.input}
-                  >
-                    <option value="">Select Class</option>
-                    {classOptions.map((classObj) => (
-                      <option key={classObj._id} value={classObj._id}>
-                        {classObj.class_name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    name="class"
-                    value={formData.class}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="e.g. cs"
-                    style={styles.input}
-                  />
-                )}
+                <select
+                  name="class"
+                  value={formData.class}
+                  onChange={handleInputChange}
+                  required
+                  style={styles.input}
+                >
+                  <option value="">Select Class</option>
+                  {classOptions.length ? classOptions.map((classObj) => (
+                    <option key={classObj._id} value={classObj._id}>
+                      {classObj.class_name}
+                    </option>
+                  )) : classes.map((c) => (
+                    <option key={c._id} value={c._id}>{c.class_name}</option>
+                  ))}
+                </select>
               </div>
               <div style={styles.formGroup}>
                 <label>Section</label>

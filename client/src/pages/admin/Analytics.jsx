@@ -12,7 +12,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { resultsAPI, studentsAPI, analyticsAPI } from '../../services/api';
+import { resultsAPI, studentsAPI, analyticsAPI, coursesAPI, departmentsAPI, classesAPI } from '../../services/api';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -22,6 +22,12 @@ const GRADE_COLORS = { A: '#27ae60', B: '#3498db', C: '#f39c12', D: '#e67e22', F
 const Analytics = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [semesterFilter, setSemesterFilter] = useState('');
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterClass, setFilterClass] = useState('');
+  const [courses, setCourses] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState({
     totalStudents: 0,
@@ -38,8 +44,32 @@ const Analytics = () => {
   const { showToast } = useToast();
 
   useEffect(() => {
+    const loadHierarchy = async () => {
+      try {
+        const [cRes, dRes, clRes] = await Promise.all([
+          coursesAPI.getAll(),
+          departmentsAPI.getAll(),
+          classesAPI.getAll(),
+        ]);
+        setCourses(Array.isArray(cRes?.data) ? cRes.data : cRes.data?.data || []);
+        setDepartments(Array.isArray(dRes?.data) ? dRes.data : dRes.data?.data || []);
+        setClasses(Array.isArray(clRes?.data) ? clRes.data : clRes.data?.data || []);
+      } catch (_) {}
+    };
+    loadHierarchy();
+  }, []);
+
+  const analyticsFilters = () => {
+    const f = {};
+    if (filterCourse) f.course = filterCourse;
+    if (filterDepartment) f.department = filterDepartment;
+    if (filterClass) f.class = filterClass;
+    return f;
+  };
+
+  useEffect(() => {
     fetchOverview();
-  }, [semesterFilter]);
+  }, [semesterFilter, filterCourse, filterDepartment, filterClass]);
 
   useEffect(() => {
     if (activeTab === 'section') {
@@ -49,13 +79,13 @@ const Analytics = () => {
     } else if (activeTab === 'rankings') {
       fetchRankings();
     }
-  }, [activeTab, semesterFilter]);
+  }, [activeTab, semesterFilter, filterCourse, filterDepartment, filterClass]);
 
   const fetchOverview = async () => {
     try {
       const [resultsRes, studentsRes] = await Promise.all([
         resultsAPI.getAll(),
-        studentsAPI.getAll(),
+        studentsAPI.getAll(analyticsFilters()),
       ]);
       const resultsList = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
       const results = resultsList
@@ -103,7 +133,7 @@ const Analytics = () => {
 
   const fetchSectionPerformance = async () => {
     try {
-      const response = await analyticsAPI.getSectionPerformance(semesterFilter);
+      const response = await analyticsAPI.getSectionPerformance(semesterFilter, analyticsFilters());
       setSectionPerformance(response.data);
     } catch (error) {
       console.error('Failed to fetch section performance:', error);
@@ -113,7 +143,7 @@ const Analytics = () => {
 
   const fetchSubjectAnalysis = async () => {
     try {
-      const response = await analyticsAPI.getSubjectAnalysis(semesterFilter);
+      const response = await analyticsAPI.getSubjectAnalysis(semesterFilter, analyticsFilters());
       setSubjectAnalysis(response.data);
     } catch (error) {
       console.error('Failed to fetch subject analysis:', error);
@@ -123,7 +153,7 @@ const Analytics = () => {
 
   const fetchRankings = async () => {
     try {
-      const response = await analyticsAPI.getRankings(semesterFilter);
+      const response = await analyticsAPI.getRankings(semesterFilter, analyticsFilters());
       setRankings(response.data);
     } catch (error) {
       console.error('Failed to fetch rankings:', error);
@@ -145,6 +175,39 @@ const Analytics = () => {
       <div style={styles.header}>
         <h2 style={styles.title}>Analytics & Reports</h2>
         <div style={styles.filterContainer}>
+          <label style={styles.filterLabel}>Course:</label>
+          <select
+            value={filterCourse}
+            onChange={(e) => { setFilterCourse(e.target.value); setFilterDepartment(''); setFilterClass(''); }}
+            style={styles.filterSelect}
+          >
+            <option value="">All</option>
+            {courses.map((c) => (
+              <option key={c._id} value={c._id}>{c.course_name} {c.course_code ? `(${c.course_code})` : ''}</option>
+            ))}
+          </select>
+          <label style={styles.filterLabel}>Department:</label>
+          <select
+            value={filterDepartment}
+            onChange={(e) => { setFilterDepartment(e.target.value); setFilterClass(''); }}
+            style={styles.filterSelect}
+          >
+            <option value="">All</option>
+            {(filterCourse ? departments.filter((d) => (d.course?._id || d.course) === filterCourse) : departments).map((d) => (
+              <option key={d._id} value={d._id}>{d.department_name} {d.department_code ? `(${d.department_code})` : ''}</option>
+            ))}
+          </select>
+          <label style={styles.filterLabel}>Class:</label>
+          <select
+            value={filterClass}
+            onChange={(e) => setFilterClass(e.target.value)}
+            style={styles.filterSelect}
+          >
+            <option value="">All</option>
+            {(filterDepartment ? classes.filter((c) => (c.department?._id || c.department) === filterDepartment) : classes).map((c) => (
+              <option key={c._id} value={c._id}>{c.class_name}</option>
+            ))}
+          </select>
           <label style={styles.filterLabel}>Semester:</label>
           <input
             type="text"
@@ -578,6 +641,13 @@ const styles = {
   filterLabel: {
     fontWeight: '500',
     color: '#2c3e50',
+  },
+  filterSelect: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    minWidth: '140px',
   },
   filterInput: {
     padding: '8px 12px',
