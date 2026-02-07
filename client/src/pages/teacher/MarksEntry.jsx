@@ -100,6 +100,7 @@ const MarksEntry = () => {
     try {
       if (!formData.classId || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
         showToast('Class, Student, Subject, and Marks are required', 'error');
+        setSubmitting(false);
         return;
       }
 
@@ -143,19 +144,9 @@ const MarksEntry = () => {
         )
       : [];
 
-  // Students in the selected class (from API when class is selected)
+  // Students in the selected class (from API when class is selected - already filtered by class)
   const classStudents = Array.isArray(studentsInClass) ? studentsInClass : [];
-
-  // Students where section equals class (section matches class_name or class_id of selected class)
-  const studentsWhereSectionEqualsClass =
-    selectedClass && classStudents.length > 0
-      ? classStudents.filter((stu) => {
-          const sec = (stu.section || '').trim();
-          const className = (selectedClass.class_name || '').trim();
-          const classIdStr = String(selectedClass.class_id ?? '');
-          return sec === className || sec === classIdStr;
-        })
-      : [];
+  const studentOptions = classStudents;
 
   // Always show a visible name in dropdown (API may use name or user.name)
   const getStudentLabel = (stu) => {
@@ -234,7 +225,7 @@ const MarksEntry = () => {
               <option value="">
                 {loadingStudentsInClass ? 'Loading students...' : formData.classId ? 'Select student' : 'Select class first'}
               </option>
-              {studentsWhereSectionEqualsClass.map((stu) => (
+              {studentOptions.map((stu) => (
                 <option key={stu._id} value={stu._id != null ? String(stu._id) : ''}>
                   {getStudentLabel(stu)}
                 </option>
