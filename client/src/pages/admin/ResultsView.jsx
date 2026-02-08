@@ -1,26 +1,51 @@
 import { useState, useEffect } from 'react';
-import { resultsAPI } from '../../services/api';
+import { resultsAPI, departmentsAPI, classesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const ResultsView = () => {
   const [results, setResults] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedClass, setSelectedClass] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchResults();
+    const loadFilters = async () => {
+      try {
+        const [deptRes, classRes] = await Promise.all([
+          departmentsAPI.getAll(),
+          classesAPI.getAll(),
+        ]);
+        setDepartments(Array.isArray(deptRes.data) ? deptRes.data : []);
+        setClasses(Array.isArray(classRes.data) ? classRes.data : []);
+      } catch (err) {
+        console.error('Failed to load filters:', err);
+      }
+    };
+    loadFilters();
   }, []);
 
+  useEffect(() => {
+    fetchResults();
+  }, [selectedDepartment, selectedClass]);
+
   const fetchResults = async () => {
+    setLoading(true);
     try {
-      const response = await resultsAPI.getAll();
-      // Remove details of unknown (orphaned results where student is missing)
+      const params = {};
+      if (selectedDepartment) params.department = selectedDepartment;
+      if (selectedClass) params.class = selectedClass;
+      const response = await resultsAPI.getAll(params);
       const list = Array.isArray(response.data) ? response.data : [];
       setResults(list.filter((r) => r.student?.name));
-    } catch (error) {
-      console.error('Failed to fetch results:', error);
+      setError('');
+    } catch (err) {
+      console.error('Failed to fetch results:', err);
       setError('Failed to load results');
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -56,10 +81,51 @@ const ResultsView = () => {
     return <div style={styles.loading}>Loading...</div>;
   }
 
+  const departmentName = (d) => d?.department_name ?? d?.name ?? '-';
+  const className = (c) => c?.class_name ?? c?.name ?? '-';
+
   return (
     <div>
       <div style={styles.header}>
         <h2 style={styles.title}>Results Management</h2>
+      </div>
+
+      <div style={styles.filters}>
+        <div style={styles.filterGroup}>
+          <label style={styles.filterLabel}>Department</label>
+          <select
+            value={selectedDepartment}
+            onChange={(e) => {
+              setSelectedDepartment(e.target.value);
+              setSelectedClass('');
+            }}
+            style={styles.select}
+          >
+            <option value="">All Departments</option>
+            {departments.map((d) => (
+              <option key={d._id} value={d._id}>
+                {departmentName(d)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div style={styles.filterGroup}>
+          <label style={styles.filterLabel}>Class</label>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">All Classes</option>
+            {classes
+              .filter((c) => !selectedDepartment || String(c.department?._id ?? c.department) === String(selectedDepartment))
+              .map((c) => (
+                <option key={c._id} value={c._id}>
+                  {className(c)}
+                </option>
+              ))}
+          </select>
+        </div>
       </div>
 
       {error && <div style={styles.error}>{error}</div>}
@@ -69,6 +135,8 @@ const ResultsView = () => {
           <thead>
             <tr>
               <th style={styles.th}>Student</th>
+              <th style={styles.th}>Department</th>
+              <th style={styles.th}>Class</th>
               <th style={styles.th}>Semester</th>
               <th style={styles.th}>Total Marks</th>
               <th style={styles.th}>Percentage</th>
@@ -81,7 +149,7 @@ const ResultsView = () => {
           <tbody>
             {results.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ ...styles.td, ...styles.noData, textAlign: 'left' }}>
+                <td colSpan="10" style={{ ...styles.td, ...styles.noData, textAlign: 'left' }}>
                   No results found
                 </td>
               </tr>
@@ -91,6 +159,8 @@ const ResultsView = () => {
                   <td style={styles.td}>
                     {result.student?.name || '-'}
                   </td>
+                  <td style={styles.td}>{departmentName(result.student?.department)}</td>
+                  <td style={styles.td}>{className(result.student?.class)}</td>
                   <td style={styles.td}>{result.semester}</td>
                   <td style={styles.td}>{result.total_marks}</td>
                   <td style={styles.td}>{result.percentage.toFixed(2)}%</td>
@@ -161,6 +231,31 @@ const styles = {
     fontSize: '28px',
     color: '#2c3e50',
     margin: 0,
+  },
+  filters: {
+    display: 'flex',
+    gap: '20px',
+    flexWrap: 'wrap',
+    alignItems: 'flex-end',
+    marginBottom: '20px',
+  },
+  filterGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  filterLabel: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  select: {
+    padding: '10px 14px',
+    minWidth: '200px',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    fontSize: '14px',
+    backgroundColor: 'white',
   },
   error: {
     backgroundColor: '#fee',

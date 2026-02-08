@@ -102,7 +102,7 @@ export const marksAPI = {
 
 // Results API
 export const resultsAPI = {
-  getAll: () => api.get('/results'),
+  getAll: (params = {}) => api.get('/results', { params }),
   getByStudent: (studentId, semester) => {
     const params = semester ? { semester } : {};
     return api.get(`/results/${studentId}`, { params });

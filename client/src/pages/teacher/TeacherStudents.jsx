@@ -46,7 +46,18 @@ const TeacherStudents = () => {
   };
 
   const getFilteredStudents = () => {
-    let filtered = students;
+    // Only show students from this teacher's assigned classes
+    const teacherClassIds = new Set(
+      classes
+        .filter((cls) =>
+          cls.subjects?.some((s) => String(s.teacher?._id || s.teacher) === String(user?._id))
+        )
+        .map((c) => String(c._id))
+    );
+    let filtered = students.filter((s) => {
+      const studentClassId = s.class?._id || s.class;
+      return studentClassId && teacherClassIds.has(String(studentClassId));
+    });
 
     if (filterCourse) {
       filtered = filtered.filter((s) => (s.course?._id || s.course) === filterCourse);
@@ -101,22 +112,24 @@ const TeacherStudents = () => {
     return <LoadingSpinner />;
   }
 
+  const teacherClasses = classes.filter((cls) =>
+    cls.subjects?.some((s) => String(s.teacher?._id || s.teacher) === String(user?._id))
+  );
   const filteredStudents = getFilteredStudents();
-  const teacherClasses = classes.filter((cls) => {
-    return cls.subjects?.some(
-      (s) => String(s.teacher?._id || s.teacher) === String(user?._id)
-    );
-  });
 
-  // Get unique sections from filtered students (by class if selected)
+  // Sections for dropdown: from students in teacher's classes (and in selected class if any)
+  const teacherStudentClassIds = new Set(teacherClasses.map((c) => String(c._id)));
+  const studentsInTeacherClasses = students.filter((s) => {
+    const sc = s.class?._id || s.class;
+    return sc && teacherStudentClassIds.has(String(sc));
+  });
   const studentsForSectionFilter = selectedClass
-    ? students.filter((s) => {
+    ? studentsInTeacherClasses.filter((s) => {
         const studentClassId = s.class?._id || s.class;
-        const classObj = classes.find((c) => c._id === selectedClass);
-        return classObj && String(studentClassId) === String(classObj._id);
+        return String(studentClassId) === String(selectedClass);
       })
-    : students;
-  const uniqueSections = [...new Set(studentsForSectionFilter.map(s => s.section).filter(Boolean))].sort();
+    : studentsInTeacherClasses;
+  const uniqueSections = [...new Set(studentsForSectionFilter.map((s) => s.section).filter(Boolean))].sort();
 
   return (
     <div>

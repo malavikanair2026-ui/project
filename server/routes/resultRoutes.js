@@ -2,6 +2,7 @@ const express = require('express');
 const Result = require('../models/Result');
 const Marks = require('../models/Marks');
 const Subject = require('../models/Subject');
+const Student = require('../models/Student');
 const { calculateGrade, calculatePercentage, calculateSGPA } = require('../utils/calculateResult');
 
 const router = express.Router();
@@ -55,10 +56,23 @@ router.post('/calculate/:studentId', async (req, res) => {
   }
 });
 
-// Get all results (populate student with course, department, class for analytics)
+// Get all results (optional filter by department, class, semester)
 router.get('/', async (req, res) => {
   try {
-    const results = await Result.find()
+    const { department, class: classId, semester } = req.query;
+    let filter = {};
+    if (department || classId) {
+      const studentFilter = {};
+      if (department) studentFilter.department = department;
+      if (classId) studentFilter.class = classId;
+      const students = await Student.find(studentFilter).select('_id');
+      const studentIds = students.map((s) => s._id);
+      if (studentIds.length === 0) return res.json([]);
+      filter.student = { $in: studentIds };
+    }
+    if (semester) filter.semester = semester;
+
+    const results = await Result.find(filter)
       .populate({
         path: 'student',
         populate: [
