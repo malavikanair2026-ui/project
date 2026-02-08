@@ -11,7 +11,8 @@ const TeacherAnalytics = () => {
   const [students, setStudents] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSection, setSelectedSection] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedClass, setSelectedClass] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
 
   useEffect(() => {
@@ -23,12 +24,16 @@ const TeacherAnalytics = () => {
   }, [user?._id]);
 
   useEffect(() => {
-    if (selectedSection) {
-      fetchSectionData();
+    setSelectedClass('');
+  }, [selectedDepartment]);
+
+  useEffect(() => {
+    if (selectedClass) {
+      fetchClassData();
     } else {
       setResults([]);
     }
-  }, [selectedSection, selectedSemester, classes, students]);
+  }, [selectedClass, selectedSemester, classes, students]);
 
   const fetchData = async () => {
     try {
@@ -47,24 +52,20 @@ const TeacherAnalytics = () => {
     }
   };
 
-  const getSectionValue = (s) => {
-    const v = s?.section;
-    const str = v === null || v === undefined ? '' : String(v).trim();
-    return str || 'N/A';
-  };
+  const getClassId = (s) => s?.class?._id ?? s?.class ?? null;
 
-  const fetchSectionData = async () => {
+  const fetchClassData = async () => {
     try {
       const allResults = await resultsAPI.getAll();
       let filteredResults = Array.isArray(allResults?.data) ? allResults.data : [];
 
-      if (selectedSection && filteredResults.length > 0) {
-        const sectionStr = String(selectedSection);
+      if (selectedClass && filteredResults.length > 0) {
+        const classIdStr = String(selectedClass);
         filteredResults = filteredResults.filter((r) => {
           const studentId = r.student?._id ?? r.student;
           const student = students.find((s) => String(s._id) === String(studentId));
-          const studentSection = getSectionValue(student ?? r.student ?? {});
-          return studentSection === sectionStr;
+          const studentClassId = getClassId(student ?? r.student ?? {});
+          return studentClassId != null && String(studentClassId) === classIdStr;
         });
       }
 
@@ -76,8 +77,8 @@ const TeacherAnalytics = () => {
 
       setResults(filteredResults);
     } catch (error) {
-      console.error('Failed to fetch section data:', error);
-      showToast('Failed to load section performance', 'error');
+      console.error('Failed to fetch class data:', error);
+      showToast('Failed to load class performance', 'error');
     }
   };
 
@@ -103,27 +104,47 @@ const TeacherAnalytics = () => {
     return teacherClasses.some((cls) => String(cls._id) === String(studentClassId));
   });
 
-  const sectionSet = new Set(
-    (teacherStudents.length > 0 ? teacherStudents : students).map((s) => {
-      const v = s.section;
-      const str = v === null || v === undefined ? '' : String(v).trim();
-      return str || 'N/A';
-    })
-  );
-  const sections = [...sectionSet].sort((a, b) =>
-    a === 'N/A' ? 1 : b === 'N/A' ? -1 : a.localeCompare(b)
+  // Departments from teacher's students (for department-wise view)
+  const departmentMap = {};
+  (teacherStudents.length > 0 ? teacherStudents : students).forEach((s) => {
+    const d = s.department;
+    const id = d?._id ?? d;
+    const name = d?.department_name ?? d?.name ?? 'N/A';
+    if (id && name) departmentMap[String(id)] = { id: String(id), name };
+  });
+  const departments = Object.values(departmentMap).sort((a, b) =>
+    a.name === 'N/A' ? 1 : b.name === 'N/A' ? -1 : a.name.localeCompare(b.name)
   );
 
-  const sectionStudents = selectedSection
+  // Students in selected department only
+  const studentsInDepartment = selectedDepartment
     ? (teacherStudents.length > 0 ? teacherStudents : students).filter(
-        (s) => getSectionValue(s) === selectedSection
+        (s) => String(s.department?._id ?? s.department) === String(selectedDepartment)
+      )
+    : [];
+
+  // Classes within the selected department (from students in that department)
+  const classMap = {};
+  studentsInDepartment.forEach((s) => {
+    const c = s.class;
+    const id = c?._id ?? c;
+    const name = c?.class_name ?? c?.name ?? 'N/A';
+    if (id && name) classMap[String(id)] = { id: String(id), name };
+  });
+  const departmentClasses = Object.values(classMap).sort((a, b) =>
+    a.name === 'N/A' ? 1 : b.name === 'N/A' ? -1 : a.name.localeCompare(b.name)
+  );
+
+  const classStudents = selectedClass
+    ? studentsInDepartment.filter(
+        (s) => String(getClassId(s)) === String(selectedClass)
       )
     : [];
 
   const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
 
-  // Calculate statistics (by section)
-  const totalStudents = sectionStudents.length;
+  // Calculate statistics (by class)
+  const totalStudents = classStudents.length;
   const studentsWithResults = results.length;
   const passCount = results.filter((r) => r.grade !== 'F').length;
   const failCount = results.filter((r) => r.grade === 'F').length;
@@ -160,14 +181,30 @@ const TeacherAnalytics = () => {
 
       <div style={styles.filters}>
         <select
-          value={selectedSection}
-          onChange={(e) => setSelectedSection(e.target.value)}
+          value={selectedDepartment}
+          onChange={(e) => setSelectedDepartment(e.target.value)}
           style={styles.select}
         >
-          <option value="">Select Section</option>
-          {sections.map((sec) => (
-            <option key={sec} value={sec}>
-              {sec}
+          <option value="">Select Department</option>
+          {departments.map((dept) => (
+            <option key={dept.id} value={dept.id}>
+              {dept.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+          style={styles.select}
+          disabled={!selectedDepartment}
+        >
+          <option value="">
+            {selectedDepartment ? 'Select Class' : 'Select department first'}
+          </option>
+          {departmentClasses.map((cls) => (
+            <option key={cls.id} value={cls.id}>
+              {cls.name}
             </option>
           ))}
         </select>
@@ -176,7 +213,7 @@ const TeacherAnalytics = () => {
           value={selectedSemester}
           onChange={(e) => setSelectedSemester(e.target.value)}
           style={styles.select}
-          disabled={!selectedSection}
+          disabled={!selectedClass}
         >
           <option value="">All Semesters</option>
           {uniqueSemesters.map((sem) => (
@@ -187,7 +224,7 @@ const TeacherAnalytics = () => {
         </select>
       </div>
 
-      {selectedSection ? (
+      {selectedDepartment && selectedClass ? (
         <div>
           {/* Statistics */}
           <div style={styles.statsGrid}>
@@ -304,7 +341,9 @@ const TeacherAnalytics = () => {
         </div>
       ) : (
         <div style={styles.noData}>
-          Please select a section to view analytics
+          {!selectedDepartment
+            ? 'Please select a department to view class performance analytics.'
+            : 'Please select a class to view analytics.'}
         </div>
       )}
     </div>
