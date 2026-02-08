@@ -61,10 +61,16 @@ router.get('/teacher/:teacherId', protect, authorize('teacher', 'admin'), async 
         { teacher: null },
       ],
     })
-      .populate('student', 'name student_id')
       .populate('teacher', 'name email')
-      .sort({ createdAt: -1 });
-    res.json(queries);
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Don't send student details to teacher (privacy: query content only)
+    const sanitized = queries.map((q) => {
+      const { student, ...rest } = q;
+      return { ...rest, student: undefined };
+    });
+    res.json(sanitized);
   } catch (error) {
     console.error('Get teacher queries error:', error);
     res.status(500).json({ message: 'Failed to fetch queries' });
@@ -96,6 +102,36 @@ router.get('/student/:studentId', protect, async (req, res) => {
   } catch (error) {
     console.error('Get queries error:', error);
     res.status(500).json({ message: 'Failed to fetch queries' });
+  }
+});
+
+/**
+ * GET /api/queries/:id
+ * Get a single query by id (teacher/admin or the student who created it).
+ */
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const queryDoc = await Query.findById(req.params.id)
+      .populate('teacher', 'name email')
+      .lean();
+    if (!queryDoc) {
+      return res.status(404).json({ message: 'Query not found' });
+    }
+    const isTeacherOrAdmin = ['teacher', 'admin'].includes(req.user?.role);
+    if (isTeacherOrAdmin) {
+      const { student, ...rest } = queryDoc;
+      return res.json({ ...rest, student: undefined });
+    }
+    if (req.user.role === 'student') {
+      const student = await Student.findOne({ user: req.user._id });
+      if (!student || String(student._id) !== String(queryDoc.student)) {
+        return res.status(403).json({ message: 'Not authorized to view this query' });
+      }
+    }
+    res.json(queryDoc);
+  } catch (error) {
+    console.error('Get query error:', error);
+    res.status(500).json({ message: 'Failed to fetch query' });
   }
 });
 
@@ -137,6 +173,39 @@ router.put('/:id/respond', protect, authorize('teacher', 'admin'), async (req, r
   } catch (error) {
     console.error('Respond to query error:', error);
     res.status(500).json({ message: 'Failed to respond to query' });
+  }
+});
+
+/**
+ * DELETE /api/queries/:id
+ * Delete a student query. Teacher/admin can delete any; student can delete only their own.
+ */
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const queryDoc = await Query.findById(req.params.id);
+    if (!queryDoc) {
+      return res.status(404).json({ message: 'Query not found' });
+    }
+
+    const isTeacherOrAdmin = ['teacher', 'admin'].includes(req.user?.role);
+    if (isTeacherOrAdmin) {
+      await Query.findByIdAndDelete(req.params.id);
+      return res.json({ message: 'Query deleted' });
+    }
+
+    if (req.user.role === 'student') {
+      const student = await Student.findOne({ user: req.user._id });
+      if (!student || String(student._id) !== String(queryDoc.student)) {
+        return res.status(403).json({ message: 'Not authorized to delete this query' });
+      }
+      await Query.findByIdAndDelete(req.params.id);
+      return res.json({ message: 'Query deleted' });
+    }
+
+    return res.status(403).json({ message: 'Not authorized to delete queries' });
+  } catch (error) {
+    console.error('Delete query error:', error);
+    res.status(500).json({ message: 'Failed to delete query' });
   }
 });
 

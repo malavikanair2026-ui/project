@@ -12,6 +12,7 @@ const StudentQueries = () => {
   const [queries, setQueries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [formData, setFormData] = useState({
     teacher: '',
     query: '',
@@ -119,6 +120,25 @@ const StudentQueries = () => {
       showToast(error.response?.data?.message || 'Failed to send query', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (queryId) => {
+    if (!window.confirm('Delete this query? This cannot be undone.')) return;
+    setDeletingId(queryId);
+    try {
+      await queriesAPI.delete(queryId);
+      showToast('Query deleted', 'success');
+      fetchData();
+    } catch (error) {
+      if (error.response?.status === 404) {
+        showToast('Query already removed', 'success');
+        fetchData();
+      } else {
+        showToast(error.response?.data?.message || 'Failed to delete query', 'error');
+      }
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -273,8 +293,19 @@ const StudentQueries = () => {
                       )}
                     </div>
                   </div>
-                  <div style={{ ...styles.queryStatus, backgroundColor: q.status === 'answered' ? '#27ae60' : '#f39c12' }}>
-                    {q.status === 'answered' ? 'Answered' : 'Pending'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ ...styles.queryStatus, backgroundColor: q.status === 'answered' ? '#27ae60' : '#f39c12' }}>
+                      {q.status === 'answered' ? 'Answered' : 'Pending'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(q._id)}
+                      disabled={deletingId === q._id}
+                      style={styles.deleteBtn}
+                      title="Delete query"
+                    >
+                      {deletingId === q._id ? 'Deleting...' : 'Delete'}
+                    </button>
                   </div>
                 </div>
                 <div style={styles.queryBody}>
@@ -467,6 +498,16 @@ const styles = {
     color: 'white',
     borderRadius: '12px',
     fontSize: '12px',
+    fontWeight: '500',
+  },
+  deleteBtn: {
+    padding: '6px 12px',
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
     fontWeight: '500',
   },
   queryBody: {

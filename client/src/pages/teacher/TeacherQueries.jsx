@@ -13,6 +13,7 @@ const TeacherQueries = () => {
   const [respondingToId, setRespondingToId] = useState(null);
   const [responseText, setResponseText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     if (user?._id) fetchQueries();
@@ -48,6 +49,25 @@ const TeacherQueries = () => {
       showToast(error.response?.data?.message || 'Failed to send response', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (queryId) => {
+    if (!window.confirm('Delete this query? This cannot be undone.')) return;
+    setDeletingId(queryId);
+    try {
+      await queriesAPI.delete(queryId);
+      showToast('Query deleted', 'success');
+      fetchQueries();
+    } catch (error) {
+      if (error.response?.status === 404) {
+        showToast('Query already removed', 'success');
+        fetchQueries();
+      } else {
+        showToast(error.response?.data?.message || 'Failed to delete query', 'error');
+      }
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -124,12 +144,6 @@ const TeacherQueries = () => {
             <div key={q._id ?? `query-${index}`} style={styles.card}>
               <div style={styles.cardHeader}>
                 <div>
-                  <strong style={styles.studentName}>
-                    {q.student?.name || 'Student'}
-                  </strong>
-                  {q.student?.student_id && (
-                    <span style={styles.studentId}> (ID: {q.student.student_id})</span>
-                  )}
                   <div style={styles.meta}>
                     <span style={styles.subject}>
                       {q.subject || 'General Query'}
@@ -139,14 +153,25 @@ const TeacherQueries = () => {
                     </span>
                   </div>
                 </div>
-                <span
-                  style={{
-                    ...styles.status,
-                    backgroundColor: q.status === 'answered' ? '#27ae60' : '#f39c12',
-                  }}
-                >
-                  {q.status === 'answered' ? 'Answered' : 'Pending'}
-                </span>
+                <div style={styles.headerRight}>
+                  <span
+                    style={{
+                      ...styles.status,
+                      backgroundColor: q.status === 'answered' ? '#27ae60' : '#f39c12',
+                    }}
+                  >
+                    {q.status === 'answered' ? 'Answered' : 'Pending'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(q._id)}
+                    disabled={deletingId === q._id}
+                    style={styles.deleteBtn}
+                    title="Delete query"
+                  >
+                    {deletingId === q._id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
               </div>
               <div style={styles.queryBody}>
                 <p style={styles.queryText}>{q.query}</p>
@@ -297,11 +322,26 @@ const styles = {
     marginRight: '12px',
   },
   date: {},
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
   status: {
     padding: '4px 12px',
     borderRadius: '12px',
     color: 'white',
     fontSize: '12px',
+    fontWeight: '500',
+  },
+  deleteBtn: {
+    padding: '6px 12px',
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
     fontWeight: '500',
   },
   queryBody: {

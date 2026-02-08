@@ -150,6 +150,7 @@ export const queriesAPI = {
   getByStudent: (studentId) => api.get(`/queries/student/${studentId}`),
   getByTeacher: (teacherId) => api.get(`/queries/teacher/${teacherId}`),
   respond: (queryId, response) => api.put(`/queries/${queryId}/respond`, { response }),
+  delete: (queryId) => api.delete(`/queries/${queryId}`),
 };
 
 // Notifications API
