@@ -59,6 +59,19 @@ const MarksEntry = () => {
     return () => { cancelled = true; };
   }, [formData.classId]);
 
+  // Auto-fill semester with the selected class's active semester
+  useEffect(() => {
+    if (!formData.classId || !classes.length) return;
+    const cls = classes.find((c) => String(c._id) === String(formData.classId));
+    const semesters = cls?.semesters;
+    if (!Array.isArray(semesters) || semesters.length === 0) return;
+    const active = semesters.find((s) => s.is_active === true);
+    const semesterName = active?.semester_name ?? semesters[0]?.semester_name ?? '';
+    if (semesterName) {
+      setFormData((prev) => (prev.semester === semesterName ? prev : { ...prev, semester: semesterName }));
+    }
+  }, [formData.classId, classes]);
+
   const fetchData = async () => {
     try {
       const [classesRes, studentsRes] = await Promise.all([
@@ -268,9 +281,9 @@ const MarksEntry = () => {
               type="text"
               name="semester"
               value={formData.semester}
-              onChange={handleChange}
-              placeholder="e.g., Sem1"
-              style={styles.input}
+              readOnly
+              placeholder="Auto-filled from class"
+              style={{ ...styles.input, ...styles.readOnlyInput }}
             />
           </div>
           <div style={styles.formGroupCheckbox}>
@@ -337,6 +350,11 @@ const styles = {
     border: '1px solid #ddd',
     borderRadius: '4px',
     fontSize: '14px',
+  },
+  readOnlyInput: {
+    backgroundColor: '#f5f5f5',
+    color: '#555',
+    cursor: 'not-allowed',
   },
   button: {
     alignSelf: 'flex-start',
