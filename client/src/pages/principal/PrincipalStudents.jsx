@@ -49,6 +49,8 @@ const PrincipalStudents = () => {
     }
   };
 
+  const getClassDisplay = (c) => (c != null && typeof c === 'object' ? (c.class_name ?? '-') : (c ?? 'CS'));
+
   const getFilteredStudents = () => {
     let filtered = students;
 
@@ -59,10 +61,7 @@ const PrincipalStudents = () => {
       filtered = filtered.filter((s) => (s.department?._id || s.department) === filterDepartment);
     }
     if (filterClass) {
-      filtered = filtered.filter((s) => {
-        const studentClassName = s.class?.class_name || s.class;
-        return studentClassName === filterClass;
-      });
+      filtered = filtered.filter((s) => getClassDisplay(s.class) === filterClass);
     }
     if (selectedSection) {
       filtered = filtered.filter((s) => s.section === selectedSection);
@@ -73,7 +72,7 @@ const PrincipalStudents = () => {
         (s) =>
           s.name?.toLowerCase().includes(term) ||
           s.student_id?.toLowerCase().includes(term) ||
-          (s.class?.class_name || s.class)?.toLowerCase?.()?.includes?.(term)
+          getClassDisplay(s.class)?.toLowerCase?.()?.includes?.(term)
       );
     }
 
@@ -89,7 +88,7 @@ const PrincipalStudents = () => {
   const groupStudentsByClass = (studentList) => {
     const grouped = {};
     studentList.forEach((student) => {
-      const className = student.class?.class_name || student.class || 'CS';
+      const className = getClassDisplay(student.class);
       if (!grouped[className]) {
         grouped[className] = [];
       }

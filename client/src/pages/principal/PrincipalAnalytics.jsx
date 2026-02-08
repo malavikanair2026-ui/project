@@ -19,7 +19,7 @@ const PrincipalAnalytics = () => {
     gradeDistribution: {},
     topPerformers: [],
   });
-  const [sectionPerformance, setSectionPerformance] = useState({});
+  const [classPerformance, setClassPerformance] = useState({});
   const [subjectAnalysis, setSubjectAnalysis] = useState({});
   const [rankings, setRankings] = useState([]);
   const { showToast } = useToast();
@@ -42,8 +42,8 @@ const PrincipalAnalytics = () => {
   }, [selectedSemester]);
 
   useEffect(() => {
-    if (activeTab === 'section') {
-      fetchSectionPerformance();
+    if (activeTab === 'class') {
+      fetchClassPerformance();
     } else if (activeTab === 'subject') {
       fetchSubjectAnalysis();
     } else if (activeTab === 'rankings') {
@@ -77,13 +77,17 @@ const PrincipalAnalytics = () => {
         .filter((r) => r.student?.name)
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, 10)
-        .map((r) => ({
-          name: r.student?.name,
-          percentage: r.percentage,
-          grade: r.grade,
-          studentId: r.student?.student_id ?? '-',
-          class: r.student?.class ?? 'cs',
-        }));
+        .map((r) => {
+          const c = r.student?.class;
+          const classDisplay = c != null && typeof c === 'object' ? (c.class_name ?? '-') : (c ?? 'cs');
+          return {
+            name: r.student?.name,
+            percentage: r.percentage,
+            grade: r.grade,
+            studentId: r.student?.student_id ?? '-',
+            class: classDisplay,
+          };
+        });
 
       setOverview({
         totalStudents: students.length,
@@ -102,13 +106,13 @@ const PrincipalAnalytics = () => {
     }
   };
 
-  const fetchSectionPerformance = async () => {
+  const fetchClassPerformance = async () => {
     try {
-      const response = await analyticsAPI.getSectionPerformance(selectedSemester);
-      setSectionPerformance(response.data);
+      const response = await analyticsAPI.getClassPerformance(selectedSemester, {});
+      setClassPerformance(response.data || {});
     } catch (error) {
-      console.error('Failed to fetch section performance:', error);
-      showToast('Failed to load section performance', 'error');
+      console.error('Failed to fetch class performance:', error);
+      showToast('Failed to load class performance', 'error');
     }
   };
 
@@ -177,11 +181,11 @@ const PrincipalAnalytics = () => {
         <button
           style={{
             ...styles.tab,
-            ...(activeTab === 'section' ? styles.tabActive : {}),
+            ...(activeTab === 'class' ? styles.tabActive : {}),
           }}
-          onClick={() => setActiveTab('section')}
+          onClick={() => setActiveTab('class')}
         >
-          🏫 Section Performance
+          🏫 Class Performance
         </button>
         <button
           style={{
@@ -316,33 +320,33 @@ const PrincipalAnalytics = () => {
         </div>
       )}
 
-      {activeTab === 'section' && (
+      {activeTab === 'class' && (
         <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Section-wise Performance</h3>
-          {Object.keys(sectionPerformance).length === 0 ? (
+          <h3 style={styles.cardTitle}>Class-wise Performance</h3>
+          {Object.keys(classPerformance).length === 0 ? (
             <LoadingSpinner />
           ) : (
             <div style={styles.classList}>
-              {Object.entries(sectionPerformance).map(([sectionName, data]) => (
-                <div key={sectionName} style={styles.classItem}>
+              {Object.values(classPerformance).map((data) => (
+                <div key={data.className} style={styles.classItem}>
                   <div style={styles.classHeader}>
                     <div>
-                      <span style={styles.className}>Section {data.sectionName}</span>
+                      <span style={styles.className}>Class {data.className}</span>
                       <div style={styles.classStats}>
-                        {data.totalStudents} students | {data.resultsCount} results
+                        {data.totalStudents ?? 0} students | {data.resultsCount ?? 0} results
                       </div>
                     </div>
                     <div style={styles.classMetrics}>
                       <div style={styles.metric}>
                         <span style={styles.metricLabel}>Average</span>
                         <span style={styles.metricValue}>
-                          {data.averagePercentage.toFixed(1)}%
+                          {(data.averagePercentage ?? 0).toFixed(1)}%
                         </span>
                       </div>
                       <div style={styles.metric}>
                         <span style={styles.metricLabel}>Pass Rate</span>
                         <span style={styles.metricValue}>
-                          {data.passRate.toFixed(1)}%
+                          {(data.passRate ?? 0).toFixed(1)}%
                         </span>
                       </div>
                     </div>
@@ -351,8 +355,8 @@ const PrincipalAnalytics = () => {
                     <div
                       style={{
                         ...styles.classBar,
-                        width: `${Math.min(data.averagePercentage, 100)}%`,
-                        backgroundColor: getPerformanceColor(data.averagePercentage),
+                        width: `${Math.min(data.averagePercentage ?? 0, 100)}%`,
+                        backgroundColor: getPerformanceColor(data.averagePercentage ?? 0),
                       }}
                     />
                   </div>
@@ -479,7 +483,11 @@ const PrincipalAnalytics = () => {
                       </td>
                       <td>{ranking.studentId}</td>
                       <td style={styles.nameCell}>{ranking.name}</td>
-                      <td>{ranking.name && String(ranking.name).trim().toLowerCase().includes('sini') ? 'cs' : (() => { const c = ranking.class?.class_name ?? ranking.class ?? 'cs'; return c === 'class' ? 'cs' : c; })()}</td>
+                      <td>{(() => {
+                        const c = ranking.class;
+                        if (c != null && typeof c === 'object') return c.class_name ?? '-';
+                        return ranking.name && String(ranking.name).trim().toLowerCase().includes('sini') ? 'cs' : (c ?? 'cs');
+                      })()}</td>
                       <td>{ranking.section}</td>
                       <td>{ranking.percentage.toFixed(2)}%</td>
                       <td>

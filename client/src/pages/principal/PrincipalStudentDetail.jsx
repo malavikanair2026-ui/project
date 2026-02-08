@@ -111,7 +111,7 @@ const PrincipalStudentDetail = () => {
             <div style={styles.studentInfo}>
               <span>ID: {student.student_id}</span>
               <span>•</span>
-              <span>Class: {student.class?.class_name || student.class || 'CS'}</span>
+              <span>Class: {student.class != null && typeof student.class === 'object' ? (student.class.class_name ?? '-') : (student.class ?? 'CS')}</span>
               <span>•</span>
               <span>Section: {student.section || 'N/A'}</span>
               {student.dob && (
