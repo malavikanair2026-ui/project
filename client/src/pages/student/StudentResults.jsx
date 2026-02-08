@@ -67,6 +67,12 @@ const StudentResults = () => {
     return colors[status] || '#95a5a6';
   };
 
+  // Total maximum marks for a semester (sum of max_marks of all subjects in that semester's marks)
+  const getMaxMarksForSemester = (semester) => {
+    const semesterMarks = marks.filter((m) => (m.semester || '') === (semester || ''));
+    return semesterMarks.reduce((sum, m) => sum + (m.subject?.max_marks || 0), 0);
+  };
+
   const exportToPdf = () => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -94,17 +100,24 @@ const StudentResults = () => {
     doc.text('Result Summary', 14, y);
     y += 10;
 
+    const getMaxForSemester = (sem) =>
+      marks.filter((m) => (m.semester || '') === (sem || '')).reduce((s, m) => s + (m.subject?.max_marks || 0), 0);
+
     autoTable(doc, {
       startY: y,
       head: [['Semester', 'Total Marks', 'Percentage', 'Grade', 'SGPA', 'Status']],
-      body: results.map((r) => [
-        r.semester || '-',
-        String(r.total_marks ?? '-'),
-        r.percentage != null ? `${r.percentage.toFixed(2)}%` : '-',
-        r.grade || '-',
-        r.sgpa != null ? r.sgpa.toFixed(2) : '-',
-        (r.status || '-').toUpperCase(),
-      ]),
+      body: results.map((r) => {
+        const maxM = getMaxForSemester(r.semester);
+        const totalStr = maxM > 0 ? `${r.total_marks ?? '-'} / ${maxM}` : String(r.total_marks ?? '-');
+        return [
+          r.semester || '-',
+          totalStr,
+          r.percentage != null ? `${r.percentage.toFixed(2)}%` : '-',
+          r.grade || '-',
+          r.sgpa != null ? r.sgpa.toFixed(2) : '-',
+          (r.status || '-').toUpperCase(),
+        ];
+      }),
       theme: 'grid',
       headStyles: { fillColor: [52, 152, 219], fontSize: 10 },
       bodyStyles: { fontSize: 9 },
@@ -191,7 +204,9 @@ const StudentResults = () => {
       ) : (
         <>
           <div style={styles.resultsGrid}>
-            {results.map((result) => (
+            {results.map((result) => {
+              const maxMarks = getMaxMarksForSemester(result.semester);
+              return (
               <div key={result._id} style={styles.resultCard}>
                 <div style={styles.resultHeader}>
                   <h3 style={styles.semesterTitle}>{result.semester}</h3>
@@ -207,7 +222,10 @@ const StudentResults = () => {
                 <div style={styles.resultBody}>
                   <div style={styles.resultRow}>
                     <span>Total Marks:</span>
-                    <strong>{result.total_marks}</strong>
+                    <strong>
+                      {result.total_marks}
+                      {maxMarks > 0 ? ` / ${maxMarks}` : ''}
+                    </strong>
                   </div>
                   <div style={styles.resultRow}>
                     <span>Percentage:</span>
@@ -230,7 +248,8 @@ const StudentResults = () => {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {marks.length > 0 && (
