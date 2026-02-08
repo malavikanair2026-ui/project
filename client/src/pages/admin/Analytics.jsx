@@ -38,7 +38,7 @@ const Analytics = () => {
     gradeDistribution: {},
     topPerformers: [],
   });
-  const [sectionPerformance, setSectionPerformance] = useState({});
+  const [classPerformance, setClassPerformance] = useState({});
   const [subjectAnalysis, setSubjectAnalysis] = useState({});
   const [rankings, setRankings] = useState([]);
   const { showToast } = useToast();
@@ -72,8 +72,8 @@ const Analytics = () => {
   }, [semesterFilter, filterCourse, filterDepartment, filterClass]);
 
   useEffect(() => {
-    if (activeTab === 'section') {
-      fetchSectionPerformance();
+    if (activeTab === 'class') {
+      fetchClassPerformance();
     } else if (activeTab === 'subject') {
       fetchSubjectAnalysis();
     } else if (activeTab === 'rankings') {
@@ -131,13 +131,13 @@ const Analytics = () => {
     }
   };
 
-  const fetchSectionPerformance = async () => {
+  const fetchClassPerformance = async () => {
     try {
-      const response = await analyticsAPI.getSectionPerformance(semesterFilter, analyticsFilters());
-      setSectionPerformance(response.data);
+      const response = await analyticsAPI.getClassPerformance(semesterFilter, analyticsFilters());
+      setClassPerformance(response.data || {});
     } catch (error) {
-      console.error('Failed to fetch section performance:', error);
-      showToast('Failed to load section performance', 'error');
+      console.error('Failed to fetch class performance:', error);
+      showToast('Failed to load class performance', 'error');
     }
   };
 
@@ -227,10 +227,10 @@ const Analytics = () => {
           Overview
         </button>
         <button
-          style={{ ...styles.tab, ...(activeTab === 'section' ? styles.tabActive : {}) }}
-          onClick={() => setActiveTab('section')}
+          style={{ ...styles.tab, ...(activeTab === 'class' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('class')}
         >
-          Section-wise Performance
+          Class-wise Performance
         </button>
         <button
           style={{ ...styles.tab, ...(activeTab === 'subject' ? styles.tabActive : {}) }}
@@ -405,24 +405,24 @@ const Analytics = () => {
         </div>
       )}
 
-      {activeTab === 'section' && (
+      {activeTab === 'class' && (
         <div>
-          {Object.keys(sectionPerformance).length > 0 ? (
+          {Object.keys(classPerformance).length > 0 ? (
             <>
               <div style={styles.chartCard}>
-                <h3 style={styles.cardTitle}>Section Performance Comparison</h3>
+                <h3 style={styles.cardTitle}>Class Performance Comparison</h3>
                 <ResponsiveContainer width="100%" height={320}>
                   <BarChart
-                    data={Object.values(sectionPerformance).map((s) => ({
-                      section: s.sectionName,
-                      avgPercent: Number(s.averagePercentage.toFixed(1)),
-                      passRate: Number(s.passRate.toFixed(1)),
-                      students: s.totalStudents,
+                    data={Object.values(classPerformance).map((c) => ({
+                      class: c.className,
+                      avgPercent: Number((c.averagePercentage ?? 0).toFixed(1)),
+                      passRate: Number((c.passRate ?? 0).toFixed(1)),
+                      students: c.totalStudents ?? 0,
                     }))}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                    <XAxis dataKey="section" tick={{ fontSize: 12 }} />
+                    <XAxis dataKey="class" tick={{ fontSize: 12 }} />
                     <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
                     <Tooltip />
@@ -433,52 +433,52 @@ const Analytics = () => {
                 </ResponsiveContainer>
               </div>
               <div style={styles.classGrid}>
-              {Object.values(sectionPerformance).map((sectionData) => (
-                <div key={sectionData.sectionName} style={styles.classCard}>
-                  <h3 style={styles.classTitle}>Section {sectionData.sectionName}</h3>
+              {Object.values(classPerformance).map((classData) => (
+                <div key={classData.className} style={styles.classCard}>
+                  <h3 style={styles.classTitle}>Class {classData.className}</h3>
                   <div style={styles.classStats}>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Average:</span>
                       <span style={styles.classStatValue}>
-                        {sectionData.averagePercentage.toFixed(2)}%
+                        {(classData.averagePercentage ?? 0).toFixed(2)}%
                       </span>
                     </div>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Pass Rate:</span>
                       <span style={styles.classStatValue}>
-                        {sectionData.passRate.toFixed(1)}%
+                        {(classData.passRate ?? 0).toFixed(1)}%
                       </span>
                     </div>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Students:</span>
-                      <span style={styles.classStatValue}>{sectionData.totalStudents}</span>
+                      <span style={styles.classStatValue}>{classData.totalStudents ?? 0}</span>
                     </div>
                     <div style={styles.classStatItem}>
                       <span style={styles.classStatLabel}>Results:</span>
-                      <span style={styles.classStatValue}>{sectionData.resultsCount}</span>
+                      <span style={styles.classStatValue}>{classData.resultsCount ?? 0}</span>
                     </div>
                   </div>
                   <div style={styles.progressBarContainer}>
                     <div
                       style={{
                         ...styles.progressBar,
-                        width: `${Math.min(sectionData.averagePercentage, 100)}%`,
+                        width: `${Math.min(classData.averagePercentage ?? 0, 100)}%`,
                         backgroundColor:
-                          sectionData.averagePercentage >= 80
+                          (classData.averagePercentage ?? 0) >= 80
                             ? '#27ae60'
-                            : sectionData.averagePercentage >= 60
+                            : (classData.averagePercentage ?? 0) >= 60
                             ? '#3498db'
-                            : sectionData.averagePercentage >= 40
+                            : (classData.averagePercentage ?? 0) >= 40
                             ? '#f39c12'
                             : '#e74c3c',
                       }}
                     />
                   </div>
-                  {sectionData.gradeDistribution && Object.keys(sectionData.gradeDistribution).length > 0 && (
+                  {classData.gradeDistribution && Object.keys(classData.gradeDistribution).length > 0 && (
                     <div style={styles.sectionsContainer}>
                       <h4 style={styles.sectionsTitle}>Grade distribution</h4>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {Object.entries(sectionData.gradeDistribution).map(([grade, count]) => (
+                        {Object.entries(classData.gradeDistribution).map(([grade, count]) => (
                           <span key={grade} style={styles.gradeTag}>
                             {grade}: {count}
                           </span>
@@ -491,7 +491,7 @@ const Analytics = () => {
             </div>
             </>
           ) : (
-            <div style={styles.noDataCard}>No section performance data available</div>
+            <div style={styles.noDataCard}>No class performance data available</div>
           )}
         </div>
       )}
