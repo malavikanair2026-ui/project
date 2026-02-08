@@ -5,7 +5,8 @@ const Subject = require('../models/Subject');
 
 const router = express.Router();
 
-// Add marks for a student (create or update same combination)
+// Enter Marks: create marks for a student (once per student+subject+exam_type+semester)
+// To change marks, use Edit Marks (PUT /:markId).
 router.post('/:studentId', async (req, res) => {
   try {
     const { subjectId, marks_obtained, exam_type, semester, is_final } = req.body;
@@ -28,33 +29,76 @@ router.post('/:studentId', async (req, res) => {
       return res.status(400).json({ message: 'Marks obtained cannot be negative' });
     }
 
-    let mark = await Marks.findOne({
+    const existing = await Marks.findOne({
       student: req.params.studentId,
       subject: subjectId,
       exam_type: exam_type || 'final',
-      semester,
+      semester: semester || '',
     });
 
-    if (mark) {
-      mark.marks_obtained = marks_obtained;
-      mark.is_final = is_final ?? mark.is_final;
-      mark.exam_type = exam_type || mark.exam_type;
-      mark.semester = semester || mark.semester;
-      await mark.save();
-    } else {
-      mark = await Marks.create({
-        student: req.params.studentId,
-        subject: subjectId,
-        marks_obtained,
-        exam_type: exam_type || 'final',
-        semester,
-        is_final: is_final ?? false,
+    if (existing) {
+      return res.status(409).json({
+        message: 'Marks for this student and subject have already been entered. Use Edit Marks to change them.',
       });
     }
+
+    const mark = await Marks.create({
+      student: req.params.studentId,
+      subject: subjectId,
+      marks_obtained,
+      exam_type: exam_type || 'final',
+      semester: semester || '',
+      is_final: is_final ?? false,
+    });
 
     res.status(201).json(mark);
   } catch (err) {
     res.status(400).json({ message: err.message || 'Failed to save marks' });
+  }
+});
+
+// Edit Marks: update an existing mark by id
+router.put('/:markId', async (req, res) => {
+  try {
+    const { markId } = req.params;
+    const { marks_obtained, exam_type, semester, is_final } = req.body;
+
+    const mark = await Marks.findById(markId).populate('subject');
+    if (!mark) return res.status(404).json({ message: 'Mark not found' });
+
+    if (marks_obtained !== undefined) {
+      const maxMarks = mark.subject?.max_marks ?? 100;
+      if (marks_obtained > maxMarks) {
+        return res.status(400).json({
+          message: `Marks obtained (${marks_obtained}) cannot exceed maximum marks (${maxMarks})`,
+        });
+      }
+      if (marks_obtained < 0) {
+        return res.status(400).json({ message: 'Marks obtained cannot be negative' });
+      }
+      mark.marks_obtained = marks_obtained;
+    }
+    if (exam_type !== undefined) mark.exam_type = exam_type;
+    if (semester !== undefined) mark.semester = semester;
+    if (typeof is_final === 'boolean') mark.is_final = is_final;
+
+    await mark.save();
+    res.json(mark);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to update marks' });
+  }
+});
+
+// Get marks for a student (optionally by semester) - specific path so GET /marks/:id is unambiguous
+router.get('/student/:studentId', async (req, res) => {
+  try {
+    const filter = { student: req.params.studentId };
+    if (req.query.semester) filter.semester = req.query.semester;
+
+    const marks = await Marks.find(filter).populate('subject');
+    res.json(marks);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch marks' });
   }
 });
 
@@ -113,7 +157,7 @@ router.get('/by-students', async (req, res) => {
   }
 });
 
-// Get marks for a student (optionally by semester)
+// Get marks for a student (optionally by semester) - legacy path, same as /student/:studentId
 router.get('/:studentId', async (req, res) => {
   try {
     const filter = { student: req.params.studentId };

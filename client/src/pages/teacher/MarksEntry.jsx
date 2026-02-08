@@ -24,6 +24,8 @@ const MarksEntry = () => {
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [marksAlreadyEntered, setMarksAlreadyEntered] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -72,6 +74,37 @@ const MarksEntry = () => {
     }
   }, [formData.classId, classes]);
 
+  // Enter Marks: each student's marks for a given subject can be entered only once.
+  // Check if marks already exist for this student + subject + semester + exam_type.
+  useEffect(() => {
+    const { studentId, subjectId, semester, exam_type } = formData;
+    if (!studentId || !subjectId) {
+      setMarksAlreadyEntered(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingExisting(true);
+    marksAPI
+      .getByStudent(studentId, semester || undefined)
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res.data) ? res.data : [];
+        const exists = list.some(
+          (m) =>
+            String(m.subject?._id || m.subject) === String(subjectId) &&
+            (m.exam_type || 'final') === (exam_type || 'final')
+        );
+        setMarksAlreadyEntered(exists);
+      })
+      .catch(() => {
+        if (!cancelled) setMarksAlreadyEntered(false);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingExisting(false);
+      });
+    return () => { cancelled = true; };
+  }, [formData.studentId, formData.subjectId, formData.semester, formData.exam_type]);
+
   const fetchData = async () => {
     try {
       const [classesRes, studentsRes] = await Promise.all([
@@ -113,6 +146,11 @@ const MarksEntry = () => {
     try {
       if (!formData.classId || !formData.studentId || !formData.subjectId || formData.marks_obtained === '') {
         showToast('Class, Student, Subject, and Marks are required', 'error');
+        setSubmitting(false);
+        return;
+      }
+      if (marksAlreadyEntered) {
+        showToast('Marks for this student and subject have already been entered. Use Edit Marks to change them.', 'error');
         setSubmitting(false);
         return;
       }
@@ -176,6 +214,11 @@ const MarksEntry = () => {
       <h2 style={styles.title}>Enter Marks</h2>
 
       <form onSubmit={handleSubmit} style={styles.form}>
+        {marksAlreadyEntered && (
+          <div style={styles.alertBox}>
+            Marks for this student and subject have already been entered. To change them, use <strong>Edit Marks</strong>.
+          </div>
+        )}
         <div style={styles.formRow}>
           <div style={styles.formGroup}>
             <label>Class</label>
@@ -255,8 +298,10 @@ const MarksEntry = () => {
               onChange={handleChange}
               min="0"
               required
-              style={styles.input}
+              disabled={marksAlreadyEntered || checkingExisting}
+              style={{ ...styles.input, ...(marksAlreadyEntered ? styles.readOnlyInput : {}) }}
             />
+            {checkingExisting && <span style={styles.hint}>Checking existing marks...</span>}
           </div>
           <div style={styles.formGroup}>
             <label>Exam Type</label>
@@ -301,7 +346,7 @@ const MarksEntry = () => {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || marksAlreadyEntered}
           style={{
             ...styles.button,
             opacity: submitting ? 0.6 : 1,
@@ -355,6 +400,19 @@ const styles = {
     backgroundColor: '#f5f5f5',
     color: '#555',
     cursor: 'not-allowed',
+  },
+  alertBox: {
+    padding: '12px 16px',
+    backgroundColor: '#fff3cd',
+    border: '1px solid #ffc107',
+    borderRadius: '6px',
+    color: '#856404',
+    fontSize: '14px',
+  },
+  hint: {
+    fontSize: '12px',
+    color: '#6c757d',
+    marginTop: '4px',
   },
   button: {
     alignSelf: 'flex-start',

@@ -77,10 +77,14 @@ const EditMarks = () => {
       showToast('Please enter valid marks', 'error');
       return;
     }
+    const markId = editingMark._id;
+    if (!markId) {
+      showToast('Invalid mark. Please refresh the page.', 'error');
+      return;
+    }
 
     try {
-      await marksAPI.add(editingMark.student?._id || editingMark.student, {
-        subjectId: editingMark.subject?._id || editingMark.subject,
+      await marksAPI.update(markId, {
         marks_obtained: Number(editingMark.marks_obtained),
         exam_type: editingMark.exam_type,
         semester: editingMark.semester,
@@ -91,7 +95,11 @@ const EditMarks = () => {
       setEditingMark(null);
       fetchMarks();
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to update marks', 'error');
+      const msg =
+        error.response?.status === 404
+          ? 'This mark record was not found. It may have been deleted. Please refresh the page.'
+          : error.response?.data?.message || 'Failed to update marks';
+      showToast(msg, 'error');
     }
   };
 

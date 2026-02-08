@@ -90,7 +90,7 @@ export const subjectsAPI = {
 export const marksAPI = {
   getByStudent: (studentId, semester) => {
     const params = semester ? { semester } : {};
-    return api.get(`/marks/${studentId}`, { params });
+    return api.get(`/marks/student/${studentId}`, { params });
   },
   getCounts: () => api.get('/marks/counts'),
   getByStudentIds: (studentIds) => {
@@ -98,6 +98,7 @@ export const marksAPI = {
     return api.get('/marks/by-students', { params: { studentIds: ids } });
   },
   add: (studentId, data) => api.post(`/marks/${studentId}`, data),
+  update: (markId, data) => api.put(`/marks/${markId}`, data),
 };
 
 // Results API
