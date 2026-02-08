@@ -1,3 +1,4 @@
+// Class Performance Analytics: filter by department and class (not section)
 import { useState, useEffect } from 'react';
 import { classesAPI, studentsAPI, marksAPI, resultsAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -321,7 +322,7 @@ const TeacherAnalytics = () => {
                     <div style={styles.performerDetails}>ID: {performer.studentId}</div>
                   </div>
                   <div style={styles.performerStats}>
-                    <span style={styles.percentage}>{performer.percentage.toFixed(2)}%</span>
+                    <span style={styles.percentage}>{performer.percentage != null ? performer.percentage.toFixed(2) : '-'}%</span>
                     <span
                       style={{
                         ...styles.gradeBadge,

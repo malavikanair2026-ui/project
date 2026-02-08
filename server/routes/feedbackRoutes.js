@@ -31,15 +31,25 @@ router.get('/student/:studentId', protect, async (req, res) => {
 router.post('/', protect, authorize('teacher', 'admin'), async (req, res) => {
   try {
     const { student, feedback, feedback_type } = req.body;
+    if (!student || !feedback || typeof feedback !== 'string' || !feedback.trim()) {
+      return res.status(400).json({ message: 'Student and feedback text are required' });
+    }
     const feedbackDoc = await Feedback.create({
       teacher: req.user._id,
       student,
-      feedback,
+      feedback: feedback.trim(),
       feedback_type: feedback_type || 'academic',
     });
     res.status(201).json(feedbackDoc);
   } catch (error) {
     console.error(error);
+    if (error.name === 'ValidationError') {
+      const msg = Object.values(error.errors).map((e) => e.message).join(' ');
+      return res.status(400).json({ message: msg || 'Validation failed' });
+    }
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'Duplicate feedback' });
+    }
     res.status(500).json({ message: 'Failed to create feedback' });
   }
 });

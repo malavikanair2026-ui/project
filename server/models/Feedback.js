@@ -4,7 +4,7 @@ const feedbackSchema = new mongoose.Schema(
   {
     f_id: {
       type: Number,
-      unique: true,
+      // optional; no unique constraint so multiple feedbacks can be created without f_id
     },
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
