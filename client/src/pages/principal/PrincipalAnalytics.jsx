@@ -465,32 +465,32 @@ const PrincipalAnalytics = () => {
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th>Rank</th>
-                    <th>Student ID</th>
-                    <th>Name</th>
-                    <th>Class</th>
-                    <th>Section</th>
-                    <th>Percentage</th>
-                    <th>Grade</th>
-                    <th>SGPA</th>
+                    <th style={styles.th}>Rank</th>
+                    <th style={styles.th}>Student ID</th>
+                    <th style={styles.th}>Name</th>
+                    <th style={styles.th}>Class</th>
+                    <th style={styles.th}>Section</th>
+                    <th style={styles.th}>Percentage</th>
+                    <th style={styles.th}>Grade</th>
+                    <th style={styles.th}>SGPA</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rankings.map((ranking, index) => (
                     <tr key={index}>
-                      <td style={styles.rankCell}>
+                      <td style={{ ...styles.td, ...styles.rankCell }}>
                         <span style={styles.rankBadge}>#{ranking.rank}</span>
                       </td>
-                      <td>{ranking.studentId}</td>
-                      <td style={styles.nameCell}>{ranking.name}</td>
-                      <td>{(() => {
+                      <td style={styles.td}>{ranking.studentId}</td>
+                      <td style={{ ...styles.td, ...styles.nameCell }}>{ranking.name}</td>
+                      <td style={styles.td}>{(() => {
                         const c = ranking.class;
                         if (c != null && typeof c === 'object') return c.class_name ?? '-';
                         return ranking.name && String(ranking.name).trim().toLowerCase().includes('sini') ? 'cs' : (c ?? 'cs');
                       })()}</td>
-                      <td>{ranking.section}</td>
-                      <td>{ranking.percentage.toFixed(2)}%</td>
-                      <td>
+                      <td style={styles.td}>{ranking.section}</td>
+                      <td style={styles.td}>{ranking.percentage.toFixed(2)}%</td>
+                      <td style={styles.td}>
                         <span
                           style={{
                             ...styles.gradeBadge,
@@ -500,7 +500,7 @@ const PrincipalAnalytics = () => {
                           {ranking.grade}
                         </span>
                       </td>
-                      <td>{ranking.sgpa != null ? ranking.sgpa.toFixed(2) : '-'}</td>
+                      <td style={styles.td}>{ranking.sgpa != null ? ranking.sgpa.toFixed(2) : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -925,9 +925,10 @@ const styles = {
   td: {
     padding: '12px',
     borderBottom: '1px solid #dee2e6',
+    textAlign: 'left',
   },
   rankCell: {
-    textAlign: 'center',
+    textAlign: 'left',
   },
   nameCell: {
     fontWeight: '500',
