@@ -112,6 +112,53 @@ router.get('/profile', protect, async (req, res) => {
   }
 });
 
+// @route   PUT /api/auth/profile
+// @desc    Update logged in user profile (name, email)
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const { name, email } = req.body;
+
+    if (name !== undefined) {
+      const trimmed = typeof name === 'string' ? name.trim() : '';
+      if (!trimmed) {
+        return res.status(400).json({ message: 'Name cannot be empty' });
+      }
+      user.name = trimmed;
+    }
+
+    if (email !== undefined) {
+      const trimmed = typeof email === 'string' ? email.trim().toLowerCase() : '';
+      if (!trimmed) {
+        return res.status(400).json({ message: 'Email cannot be empty' });
+      }
+      if (trimmed !== user.email) {
+        const exists = await User.findOne({ email: trimmed });
+        if (exists) {
+          return res.status(400).json({ message: 'Email already in use' });
+        }
+        user.email = trimmed;
+      }
+    }
+
+    await user.save();
+    const updated = await User.findById(user._id).select('-password');
+    res.json(updated);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    res.status(500).json({ message: error.message || 'Failed to update profile' });
+  }
+});
+
 // @route   POST /api/auth/logout
 // @desc    Logout user (client-side token removal, but endpoint for consistency)
 // @access  Private
