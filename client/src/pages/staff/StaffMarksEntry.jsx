@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { studentsAPI, subjectsAPI, marksAPI, resultsAPI } from '../../services/api';
+import { studentsAPI, classesAPI, marksAPI, resultsAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ToastContainer';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -9,7 +9,7 @@ const StaffMarksEntry = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [students, setStudents] = useState([]);
-  const [subjects, setSubjects] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [formData, setFormData] = useState({
     studentId: '',
     subjectId: '',
@@ -32,6 +32,22 @@ const StaffMarksEntry = () => {
       setFormData((prev) => ({ ...prev, studentId: studentIdParam }));
     }
   }, [searchParams]);
+
+  // Auto-fill semester with the selected student's class active semester
+  useEffect(() => {
+    if (!formData.studentId || !classes.length) return;
+    const student = students.find((s) => String(s._id) === String(formData.studentId));
+    const classId = student?.class?._id ?? student?.class;
+    if (!classId) return;
+    const cls = classes.find((c) => String(c._id) === String(classId));
+    const semesters = cls?.semesters;
+    if (!Array.isArray(semesters) || semesters.length === 0) return;
+    const active = semesters.find((s) => s.is_active === true);
+    const semesterName = active?.semester_name ?? semesters[0]?.semester_name ?? '';
+    if (semesterName && formData.semester !== semesterName) {
+      setFormData((prev) => ({ ...prev, semester: semesterName }));
+    }
+  }, [formData.studentId, classes, students]);
 
   // Enter Marks: each student's marks for a given subject can be entered only once.
   useEffect(() => {
@@ -65,12 +81,12 @@ const StaffMarksEntry = () => {
 
   const fetchData = async () => {
     try {
-      const [studentsRes, subjectsRes] = await Promise.all([
+      const [studentsRes, classesRes] = await Promise.all([
         studentsAPI.getAll(),
-        subjectsAPI.getAll(),
+        classesAPI.getAll(),
       ]);
-      setStudents(studentsRes.data);
-      setSubjects(subjectsRes.data);
+      setStudents(studentsRes.data || []);
+      setClasses(classesRes.data || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       showToast('Failed to load data', 'error');
@@ -81,10 +97,12 @@ const StaffMarksEntry = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    const updates = { [name]: type === 'checkbox' ? checked : value };
+    if (name === 'studentId') {
+      updates.subjectId = '';
+      if (!value) updates.semester = '';
+    }
+    setFormData({ ...formData, ...updates });
   };
 
   const handleSubmit = async (e) => {
@@ -133,6 +151,36 @@ const StaffMarksEntry = () => {
     }
   };
 
+  // Group students class-wise: by class name, then sort students within each class
+  const getClassKey = (s) => String(s.class?._id ?? s.class ?? '');
+  const getClassName = (s) => (s.class?.class_name ?? s.class ?? 'No Class').toString().trim();
+  const studentsByClass = (Array.isArray(students) ? students : []).reduce((acc, s) => {
+    const key = getClassKey(s);
+    if (!acc[key]) acc[key] = { name: getClassName(s), students: [] };
+    acc[key].students.push(s);
+    return acc;
+  }, {});
+  const classKeysOrdered = Object.keys(studentsByClass).sort((a, b) =>
+    (studentsByClass[a].name || '').localeCompare(studentsByClass[b].name || '')
+  );
+  classKeysOrdered.forEach((key) => {
+    studentsByClass[key].students.sort((a, b) => {
+      const nameA = (a.name ?? a.user?.name ?? '').toString().toLowerCase();
+      const nameB = (b.name ?? b.user?.name ?? '').toString().toLowerCase();
+      return nameA.localeCompare(nameB) || ((a.section ?? '') + (a.student_id ?? '')).localeCompare((b.section ?? '') + (b.student_id ?? ''));
+    });
+  });
+
+  // Subjects for the selected student's class only
+  const selectedStudent = students.find((s) => String(s._id) === String(formData.studentId));
+  const selectedClassId = selectedStudent?.class?._id ?? selectedStudent?.class;
+  const selectedClass = classes.find((c) => String(c._id) === String(selectedClassId));
+  const subjectsForClass = Array.isArray(selectedClass?.subjects)
+    ? selectedClass.subjects
+        .map((s) => s.subject)
+        .filter(Boolean)
+    : [];
+
   if (loading) {
     return <LoadingSpinner message="Loading form..." />;
   }
@@ -159,11 +207,18 @@ const StaffMarksEntry = () => {
                 style={styles.input}
               >
                 <option value="">Select Student</option>
-                {students.map((student) => (
-                  <option key={student._id} value={student._id}>
-                    {student.name} - {student.class?.class_name || student.class || 'CS'} {student.section} (ID: {student.student_id})
-                  </option>
-                ))}
+                {classKeysOrdered.map((classKey) => {
+                  const { name: className, students: classStudents } = studentsByClass[classKey];
+                  return (
+                    <optgroup key={classKey} label={className || 'Other'}>
+                      {classStudents.map((student) => (
+                        <option key={student._id} value={student._id}>
+                          {student.name} {student.section ? `— ${student.section}` : ''} (ID: {student.student_id})
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
 
@@ -174,12 +229,15 @@ const StaffMarksEntry = () => {
                 value={formData.subjectId}
                 onChange={handleInputChange}
                 required
+                disabled={!formData.studentId}
                 style={styles.input}
               >
-                <option value="">Select Subject</option>
-                {subjects.map((subject) => (
+                <option value="">
+                  {formData.studentId ? 'Select Subject' : 'Select student first'}
+                </option>
+                {subjectsForClass.map((subject) => (
                   <option key={subject._id} value={subject._id}>
-                    {subject.subject_name} (Max: {subject.max_marks})
+                    {subject.subject_name} (Max: {subject.max_marks ?? 100})
                   </option>
                 ))}
               </select>
@@ -225,10 +283,9 @@ const StaffMarksEntry = () => {
                 type="text"
                 name="semester"
                 value={formData.semester}
-                onChange={handleInputChange}
-                required
-                placeholder="e.g., Sem1, 2024-1"
-                style={styles.input}
+                readOnly
+                placeholder="Auto-filled from class"
+                style={{ ...styles.input, backgroundColor: '#f5f5f5', color: '#555', cursor: 'not-allowed' }}
               />
             </div>
 
