@@ -16,7 +16,7 @@ const TeacherNotifications = () => {
     student: '',
     title: '',
     message: '',
-    type: 'info',
+    type: 'general',
   });
   const [showForm, setShowForm] = useState(false);
 
@@ -87,7 +87,7 @@ const TeacherNotifications = () => {
         student: '',
         title: '',
         message: '',
-        type: 'info',
+        type: 'general',
       });
       setShowForm(false);
       if (selectedStudent === formData.student) {

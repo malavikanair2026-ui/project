@@ -21,29 +21,45 @@ router.get('/student/:studentId', protect, async (req, res) => {
     })
       .populate('sender', 'name email')
       .sort({ createdAt: -1 })
-      .lean();
+      .lean()
+      .exec();
     res.json(notifications);
   } catch (error) {
-    console.error('Notification fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch notifications' });
+    console.error('Notification fetch error:', error.message);
+    console.error(error.stack);
+    res.status(500).json({
+      message: 'Failed to fetch notifications',
+      ...(process.env.NODE_ENV !== 'production' && { error: error.message }),
+    });
   }
 });
+
+const VALID_NOTIFICATION_TYPES = ['result', 'announcement', 'feedback', 'general'];
 
 // Create notification (teacher/admin only)
 router.post('/', protect, async (req, res) => {
   try {
     const { title, message, recipients, notification_type } = req.body;
+    const type =
+      notification_type && VALID_NOTIFICATION_TYPES.includes(notification_type)
+        ? notification_type
+        : 'general';
     const notification = await Notification.create({
       title,
       message,
       sender: req.user._id,
       recipients: Array.isArray(recipients) ? recipients : [recipients],
-      notification_type: notification_type || 'general',
+      notification_type: type,
     });
     res.status(201).json(notification);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to create notification' });
+    console.error('Notification create error:', error.message);
+    console.error(error.stack);
+    const message =
+      error.name === 'ValidationError'
+        ? error.message
+        : 'Failed to create notification';
+    res.status(500).json({ message });
   }
 });
 
