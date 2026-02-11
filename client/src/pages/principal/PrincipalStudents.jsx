@@ -71,7 +71,7 @@ const PrincipalStudents = () => {
       filtered = filtered.filter(
         (s) =>
           s.name?.toLowerCase().includes(term) ||
-          s.student_id?.toLowerCase().includes(term) ||
+          String(s.student_id ?? '').toLowerCase().includes(term) ||
           getClassDisplay(s.class)?.toLowerCase?.()?.includes?.(term)
       );
     }
