@@ -144,6 +144,18 @@ const TeacherQueries = () => {
             <div key={q._id ?? `query-${index}`} style={styles.card}>
               <div style={styles.cardHeader}>
                 <div>
+                  {(q.student?.name || q.student?.student_id) && (
+                    <div style={styles.studentRow}>
+                      <span style={styles.studentName}>
+                        {q.student?.name || 'Unknown Student'}
+                      </span>
+                      {q.student?.student_id != null && (
+                        <span style={styles.studentId}>
+                          (ID: {q.student.student_id})
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div style={styles.meta}>
                     <span style={styles.subject}>
                       {q.subject || 'General Query'}
@@ -305,8 +317,15 @@ const styles = {
     alignItems: 'flex-start',
     marginBottom: '12px',
   },
+  studentRow: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: '8px',
+    marginBottom: '4px',
+  },
   studentName: {
     fontSize: '16px',
+    fontWeight: '600',
     color: '#2c3e50',
   },
   studentId: {

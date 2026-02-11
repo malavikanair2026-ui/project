@@ -61,16 +61,12 @@ router.get('/teacher/:teacherId', protect, authorize('teacher', 'admin'), async 
         { teacher: null },
       ],
     })
+      .populate('student', 'name student_id')
       .populate('teacher', 'name email')
       .sort({ createdAt: -1 })
       .lean();
 
-    // Don't send student details to teacher (privacy: query content only)
-    const sanitized = queries.map((q) => {
-      const { student, ...rest } = q;
-      return { ...rest, student: undefined };
-    });
-    res.json(sanitized);
+    res.json(queries);
   } catch (error) {
     console.error('Get teacher queries error:', error);
     res.status(500).json({ message: 'Failed to fetch queries' });
