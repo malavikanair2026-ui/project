@@ -13,8 +13,17 @@ const Register = () => {
     role: 'student',
   });
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [nameError, setNameError] = useState('');
 
   const { register, isAuthenticated } = useAuth();
+
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email?.trim() || '');
+  };
+  const isValidName = (name) => /^[a-zA-Z\s]+$/.test(name?.trim() || '');
+
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -25,14 +34,45 @@ const Register = () => {
   }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    if (name === 'email') setEmailError('');
+    if (name === 'name') setNameError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const trimmedName = formData.name?.trim() || '';
+    if (!trimmedName) {
+      setNameError('Name is required');
+      showToast('Please enter your name', 'error');
+      return;
+    }
+    if (trimmedName.length < 2) {
+      setNameError('Name must be at least 2 characters');
+      showToast('Name must be at least 2 characters', 'error');
+      return;
+    }
+    if (!isValidName(formData.name)) {
+      setNameError('Name should contain only letters');
+      showToast('Name should contain only letters', 'error');
+      return;
+    }
+
+    if (!formData.email?.trim()) {
+      setEmailError('Email is required');
+      showToast('Please enter your email', 'error');
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      setEmailError('Please enter a valid email address');
+      showToast('Please enter a valid email address', 'error');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       showToast('Passwords do not match', 'error');
@@ -77,9 +117,10 @@ const Register = () => {
               value={formData.name}
               onChange={handleChange}
               required
-              style={styles.input}
+              style={{ ...styles.input, ...(nameError ? styles.inputError : {}) }}
               placeholder="Enter your name"
             />
+            {nameError && <span style={styles.fieldError}>{nameError}</span>}
           </div>
 
           <div style={styles.formGroup}>
@@ -90,9 +131,10 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              style={styles.input}
+              style={{ ...styles.input, ...(emailError ? styles.inputError : {}) }}
               placeholder="Enter your email"
             />
+            {emailError && <span style={styles.fieldError}>{emailError}</span>}
           </div>
 
           <div style={styles.formGroup}>
@@ -201,6 +243,15 @@ const styles = {
     borderRadius: '4px',
     fontSize: '16px',
     boxSizing: 'border-box',
+  },
+  inputError: {
+    borderColor: '#c33',
+  },
+  fieldError: {
+    display: 'block',
+    color: '#c33',
+    fontSize: '12px',
+    marginTop: '4px',
   },
   button: {
     padding: '12px',

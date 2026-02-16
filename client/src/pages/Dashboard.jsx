@@ -67,9 +67,6 @@ const Dashboard = () => {
               </a>
             </div>
           )}
-          <p style={styles.note}>
-            Dashboard content will be customized based on your role in the next phases.
-          </p>
         </div>
       </div>
     </div>
@@ -123,11 +120,6 @@ const styles = {
     padding: '30px',
     borderRadius: '8px',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  note: {
-    marginTop: '20px',
-    color: '#666',
-    fontStyle: 'italic',
   },
   adminLink: {
     marginTop: '20px',
