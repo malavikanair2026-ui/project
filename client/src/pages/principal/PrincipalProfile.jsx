@@ -42,16 +42,16 @@ const PrincipalProfile = () => {
     setLoading(true);
 
     try {
-      const response = await authAPI.getProfile();
+      const response = await authAPI.updateProfile({
+        name: formData.name,
+        email: formData.email,
+      });
       const updatedUser = response.data;
-      
-      // Update user info (if backend supports it)
-      // For now, we'll just update the local state
       setUser(updatedUser);
       showToast('Profile updated successfully', 'success');
     } catch (error) {
       console.error('Failed to update profile:', error);
-      showToast('Failed to update profile', 'error');
+      showToast(error.response?.data?.message || 'Failed to update profile', 'error');
     } finally {
       setLoading(false);
     }
