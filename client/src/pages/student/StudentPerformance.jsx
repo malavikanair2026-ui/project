@@ -26,7 +26,7 @@ const StudentPerformance = () => {
       }
 
       const marksRes = await marksAPI.getByStudent(studentRes.data._id);
-      setMarks(marksRes.data);
+      setMarks(Array.isArray(marksRes.data) ? marksRes.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -34,22 +34,17 @@ const StudentPerformance = () => {
     }
   };
 
-  // Calculate performance metrics
+  // Calculate performance metrics (from results and/or marks)
   const calculateMetrics = () => {
-    if (results.length === 0) return null;
+    const marksList = Array.isArray(marks) ? marks : [];
+    const resultsList = Array.isArray(results) ? results : [];
 
-    const percentages = results.map((r) => r.percentage);
-    const average = percentages.reduce((a, b) => a + b, 0) / percentages.length;
-    const highest = Math.max(...percentages);
-    const lowest = Math.min(...percentages);
-    const trend = results.length > 1 
-      ? (results[0].percentage - results[results.length - 1].percentage) 
-      : 0;
-
-    // Subject-wise performance
+    // Subject-wise performance from marks (so Strengths / Areas for Improvement work even without calculated results)
     const subjectPerformance = {};
-    marks.forEach((mark) => {
+    marksList.forEach((mark) => {
       const subjectName = mark.subject?.subject_name || '-';
+      const maxForSubject = mark.subject?.max_marks;
+      if (maxForSubject == null || maxForSubject === 0) return;
       if (!subjectPerformance[subjectName]) {
         subjectPerformance[subjectName] = {
           total: 0,
@@ -58,22 +53,21 @@ const StudentPerformance = () => {
           marks: [],
         };
       }
-      subjectPerformance[subjectName].total += mark.marks_obtained;
-      subjectPerformance[subjectName].max += mark.subject?.max_marks || 0;
+      subjectPerformance[subjectName].total += Number(mark.marks_obtained) || 0;
+      subjectPerformance[subjectName].max += Number(maxForSubject) || 0;
       subjectPerformance[subjectName].count += 1;
       subjectPerformance[subjectName].marks.push(mark.marks_obtained);
     });
 
-    // Calculate strengths and weaknesses
+    // Calculate strengths and areas for improvement
     const strengths = [];
-    const weaknesses = [];
-    const improvements = [];
+    const areasForImprovement = [];
 
     Object.entries(subjectPerformance).forEach(([subjectName, data]) => {
-      const percentage = (data.total / data.max) * 100;
+      if (!data.max) return;
       const avgMarks = data.total / data.count;
       const maxMarks = data.max / data.count;
-      const subjectPercentage = (avgMarks / maxMarks) * 100;
+      const subjectPercentage = maxMarks > 0 ? (avgMarks / maxMarks) * 100 : 0;
 
       if (subjectPercentage >= 80) {
         strengths.push({
@@ -82,15 +76,8 @@ const StudentPerformance = () => {
           average: avgMarks,
           max: maxMarks,
         });
-      } else if (subjectPercentage < 50) {
-        weaknesses.push({
-          subject: subjectName,
-          percentage: subjectPercentage,
-          average: avgMarks,
-          max: maxMarks,
-        });
       } else {
-        improvements.push({
+        areasForImprovement.push({
           subject: subjectName,
           percentage: subjectPercentage,
           average: avgMarks,
@@ -99,10 +86,33 @@ const StudentPerformance = () => {
       }
     });
 
-    // Sort by percentage
     strengths.sort((a, b) => b.percentage - a.percentage);
-    weaknesses.sort((a, b) => a.percentage - b.percentage);
-    improvements.sort((a, b) => a.percentage - b.percentage);
+    areasForImprovement.sort((a, b) => a.percentage - b.percentage);
+
+    const hasAnyData = resultsList.length > 0 || Object.keys(subjectPerformance).length > 0;
+    if (!hasAnyData) return null;
+
+    // Summary stats from results if available; otherwise from subject percentages
+    let average = 0;
+    let highest = 0;
+    let lowest = 0;
+    let trend = 0;
+    const subjectPercentages = Object.values(subjectPerformance)
+      .filter((d) => d.max > 0)
+      .map((d) => (d.total / d.max) * 100);
+    if (resultsList.length > 0) {
+      const percentages = resultsList.map((r) => r.percentage);
+      average = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+      highest = Math.max(...percentages);
+      lowest = Math.min(...percentages);
+      trend = resultsList.length > 1
+        ? (resultsList[0].percentage - resultsList[resultsList.length - 1].percentage)
+        : 0;
+    } else if (subjectPercentages.length > 0) {
+      average = subjectPercentages.reduce((a, b) => a + b, 0) / subjectPercentages.length;
+      highest = Math.max(...subjectPercentages);
+      lowest = Math.min(...subjectPercentages);
+    }
 
     return {
       average,
@@ -111,8 +121,7 @@ const StudentPerformance = () => {
       trend,
       subjectPerformance,
       strengths,
-      weaknesses,
-      improvements,
+      areasForImprovement,
     };
   };
 
@@ -258,14 +267,14 @@ const StudentPerformance = () => {
             )}
           </div>
 
-          {/* Weaknesses */}
+          {/* Areas for Improvement */}
           <div style={styles.analysisCard}>
             <h3 style={styles.analysisTitle}>
               <span style={styles.weaknessIcon}>⚠️</span> Areas for Improvement
             </h3>
-            {metrics.weaknesses.length > 0 ? (
+            {metrics.areasForImprovement.length > 0 ? (
               <div style={styles.analysisList}>
-                {metrics.weaknesses.map((item, index) => (
+                {metrics.areasForImprovement.map((item, index) => (
                   <div key={index} style={styles.analysisItem}>
                     <div style={styles.analysisItemHeader}>
                       <span style={styles.analysisSubject}>{item.subject}</span>
@@ -278,18 +287,20 @@ const StudentPerformance = () => {
                         style={{
                           ...styles.analysisBar,
                           width: `${Math.min(item.percentage, 100)}%`,
-                          backgroundColor: '#e74c3c',
+                          backgroundColor: item.percentage < 50 ? '#e74c3c' : '#f39c12',
                         }}
                       />
                     </div>
                     <div style={styles.suggestion}>
-                      💡 Focus on improving {item.subject}. Consider extra practice or seeking help.
+                      💡 {item.percentage < 50
+                        ? `Focus on improving ${item.subject}. Consider extra practice or seeking help.`
+                        : `You can do better in ${item.subject}. Keep practicing to reach 80%+.`}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p style={styles.noAnalysisData}>Great job! No major weaknesses identified</p>
+              <p style={styles.noAnalysisData}>Great job! No areas for improvement identified</p>
             )}
           </div>
         </div>
