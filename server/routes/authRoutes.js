@@ -129,6 +129,9 @@ router.put('/profile', protect, async (req, res) => {
       if (!trimmed) {
         return res.status(400).json({ message: 'Name cannot be empty' });
       }
+      if (!/^[a-zA-Z\s]+$/.test(trimmed)) {
+        return res.status(400).json({ message: 'Name must contain only letters' });
+      }
       user.name = trimmed;
     }
 

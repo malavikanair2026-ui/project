@@ -137,6 +137,8 @@ const PrincipalProfile = () => {
                 value={formData.name}
                 onChange={handleInputChange}
                 style={styles.input}
+                pattern="[a-zA-Z\s]+"
+                title="Name must contain only letters"
                 required
               />
             </div>
