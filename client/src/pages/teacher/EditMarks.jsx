@@ -86,7 +86,6 @@ const EditMarks = () => {
     try {
       await marksAPI.update(markId, {
         marks_obtained: Number(editingMark.marks_obtained),
-        exam_type: editingMark.exam_type,
         semester: editingMark.semester,
         is_final: editingMark.is_final,
       });
@@ -224,7 +223,6 @@ const EditMarks = () => {
                 <th style={styles.th}>Marks Obtained</th>
                 <th style={styles.th}>Max Marks</th>
                 <th style={styles.th}>Percentage</th>
-                <th style={styles.th}>Exam Type</th>
                 <th style={styles.th}>Semester</th>
                 <th style={styles.th}>Final</th>
                 <th style={styles.th}>Actions</th>
@@ -264,20 +262,6 @@ const EditMarks = () => {
                             : '0.0'}%
                         </td>
                         <td style={styles.td}>
-                          <select
-                            value={editingMark.exam_type}
-                            onChange={(e) =>
-                              setEditingMark({ ...editingMark, exam_type: e.target.value })
-                            }
-                            style={styles.editSelect}
-                          >
-                            <option value="final">Final</option>
-                            <option value="midterm">Midterm</option>
-                            <option value="assignment">Assignment</option>
-                            <option value="quiz">Quiz</option>
-                          </select>
-                        </td>
-                        <td style={styles.td}>
                           <input
                             type="text"
                             value={editingMark.semester}
@@ -312,7 +296,6 @@ const EditMarks = () => {
                         <td style={styles.td}>{mark.marks_obtained}</td>
                         <td style={styles.td}>{maxMarks}</td>
                         <td style={styles.td}>{percentage}%</td>
-                        <td style={styles.td}>{mark.exam_type}</td>
                         <td style={styles.td}>{mark.semester || 'N/A'}</td>
                         <td style={styles.td}>{mark.is_final ? 'Yes' : 'No'}</td>
                         <td style={styles.td}>

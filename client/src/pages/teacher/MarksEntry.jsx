@@ -303,20 +303,6 @@ const MarksEntry = () => {
             />
             {checkingExisting && <span style={styles.hint}>Checking existing marks...</span>}
           </div>
-          <div style={styles.formGroup}>
-            <label>Exam Type</label>
-            <select
-              name="exam_type"
-              value={formData.exam_type}
-              onChange={handleChange}
-              style={styles.input}
-            >
-              <option value="final">Final</option>
-              <option value="midterm">Midterm</option>
-              <option value="assignment">Assignment</option>
-              <option value="quiz">Quiz</option>
-            </select>
-          </div>
         </div>
 
         <div style={styles.formRow}>

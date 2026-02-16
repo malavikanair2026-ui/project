@@ -262,22 +262,6 @@ const StaffMarksEntry = () => {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Exam Type</label>
-              <select
-                name="exam_type"
-                value={formData.exam_type}
-                onChange={handleInputChange}
-                required
-                style={styles.input}
-              >
-                <option value="midterm">Midterm</option>
-                <option value="final">Final</option>
-                <option value="assignment">Assignment</option>
-                <option value="quiz">Quiz</option>
-              </select>
-            </div>
-
-            <div style={styles.formGroup}>
               <label style={styles.label}>Semester</label>
               <input
                 type="text"
