@@ -60,16 +60,30 @@ const StudentManagement = () => {
     }
   };
 
+  const isValidName = (name) => /^[a-zA-Z\s]+$/.test(name?.trim() || '');
+
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    const finalValue = name === 'name' ? value.replace(/[^a-zA-Z\s]/g, '') : value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: finalValue,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const trimmedName = (formData.name || '').trim();
+    if (!trimmedName) {
+      setError('Name is required');
+      return;
+    }
+    if (!isValidName(formData.name)) {
+      setError('Name should contain only letters');
+      return;
+    }
 
     const classVal = (formData.class || '').trim();
     if (!classVal) {
