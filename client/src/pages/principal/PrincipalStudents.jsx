@@ -233,12 +233,12 @@ const PrincipalStudents = () => {
                     <table style={styles.table}>
                       <thead>
                         <tr>
-                          <th>Student ID</th>
-                          <th>Name</th>
-                          <th>Section</th>
-                          <th>Latest Result</th>
-                          <th>Grade</th>
-                          <th>Actions</th>
+                          <th style={styles.th}>Student ID</th>
+                          <th style={styles.th}>Name</th>
+                          <th style={styles.th}>Section</th>
+                          <th style={styles.th}>Latest Result</th>
+                          <th style={styles.th}>Grade</th>
+                          <th style={styles.th}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -246,10 +246,10 @@ const PrincipalStudents = () => {
                           const result = getStudentResult(student._id);
                           return (
                             <tr key={student._id}>
-                              <td>{student.student_id}</td>
-                              <td style={styles.nameCell}>{student.name}</td>
-                              <td>{student.section || 'N/A'}</td>
-                              <td>
+                              <td style={styles.td}>{student.student_id}</td>
+                              <td style={{ ...styles.td, ...styles.nameCell }}>{student.name}</td>
+                              <td style={styles.td}>{student.section || 'N/A'}</td>
+                              <td style={styles.td}>
                                 {result ? (
                                   <span>
                                     {result.percentage?.toFixed(2)}%
@@ -258,7 +258,7 @@ const PrincipalStudents = () => {
                                   <span style={styles.noResult}>No result</span>
                                 )}
                               </td>
-                              <td>
+                              <td style={styles.td}>
                                 {result?.grade ? (
                                   <span
                                     style={{
@@ -272,7 +272,7 @@ const PrincipalStudents = () => {
                                   <span style={styles.noResult}>-</span>
                                 )}
                               </td>
-                              <td>
+                              <td style={styles.td}>
                                 <button
                                   onClick={() => handleViewDetails(student._id)}
                                   style={styles.viewButton}
@@ -411,6 +411,7 @@ const styles = {
   td: {
     padding: '12px',
     borderBottom: '1px solid #dee2e6',
+    textAlign: 'left',
   },
   nameCell: {
     fontWeight: '500',
