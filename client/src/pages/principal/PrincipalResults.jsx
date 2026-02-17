@@ -110,6 +110,18 @@ const PrincipalResults = () => {
     return bySemester.length > 0 ? bySemester : list;
   };
 
+  const getTotalMaxFromSubjects = (result) => {
+    const subjectMarks = getSubjectMarksForResult(result);
+    if (!subjectMarks.length) return null;
+    const maxBySubject = {};
+    subjectMarks.forEach((m) => {
+      const name = m.subjectName || '-';
+      const max = m.max_marks != null && m.max_marks !== '' ? Number(m.max_marks) : 100;
+      if (maxBySubject[name] == null || max > maxBySubject[name]) maxBySubject[name] = max;
+    });
+    return Object.values(maxBySubject).reduce((sum, m) => sum + m, 0);
+  };
+
   const loadMarksForStudent = async (studentId, semester) => {
     const key = String(studentId);
     if (marksByStudent[key]?.length > 0) return;
@@ -179,7 +191,7 @@ const PrincipalResults = () => {
               <th style={styles.th}>Class</th>
               <th style={styles.th}>Section</th>
               <th style={styles.th}>Semester</th>
-              <th style={styles.th}>Total Marks (out of)</th>
+              <th style={styles.th}>Total Marks</th>
               <th style={styles.th}>Percentage</th>
               <th style={styles.th}>Grade</th>
               <th style={styles.th}>Status</th>
@@ -219,9 +231,16 @@ const PrincipalResults = () => {
                       <td style={styles.td}>{student?.section || '-'}</td>
                       <td style={styles.td}>{result.semester}</td>
                       <td style={styles.td}>
-                        {result.total_max_marks > 0
-                          ? `${result.total_marks ?? 0} / ${result.total_max_marks}`
-                          : (result.total_marks ?? '-')}
+                        {(() => {
+                          const totalObtained = result.total_marks ?? 0;
+                          const totalMax = result.total_max_marks > 0
+                            ? result.total_max_marks
+                            : getTotalMaxFromSubjects(result);
+                          if (totalMax != null && totalMax > 0) {
+                            return `${totalObtained} / ${totalMax}`;
+                          }
+                          return typeof totalObtained === 'number' ? String(totalObtained) : (result.total_marks ?? '-');
+                        })()}
                       </td>
                       <td style={styles.td}>{result.percentage.toFixed(2)}%</td>
                       <td style={styles.td}>
@@ -274,24 +293,46 @@ const PrincipalResults = () => {
                                 <thead>
                                   <tr>
                                     <th style={styles.subjectTh}>Subject</th>
-                                    <th style={styles.subjectTh}>Marks Obtained</th>
-                                    <th style={styles.subjectTh}>Max Marks</th>
+                                    <th style={styles.subjectTh}>Marks</th>
                                     <th style={styles.subjectTh}>Percentage</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {subjectMarks.map((m, idx) => {
-                                    const max = m.max_marks || 100;
-                                    const pct = max > 0 ? ((m.marks_obtained / max) * 100).toFixed(1) : '-';
+                                    const max = m.max_marks != null && m.max_marks !== '' ? Number(m.max_marks) : 100;
+                                    const obtained = Number(m.marks_obtained) || 0;
+                                    const pct = max > 0 ? ((obtained / max) * 100).toFixed(1) : '-';
+                                    const outOf = max > 0 ? `${obtained} / ${max}` : String(obtained);
                                     return (
                                       <tr key={idx}>
                                         <td style={styles.subjectTd}>{m.subjectName}</td>
-                                        <td style={styles.subjectTd}>{m.marks_obtained}</td>
-                                        <td style={styles.subjectTd}>{max}</td>
+                                        <td style={styles.subjectTd}>{outOf}</td>
                                         <td style={styles.subjectTd}>{pct}%</td>
                                       </tr>
                                     );
                                   })}
+                                  {(() => {
+                                    const maxBySubject = {};
+                                    let totalObtained = 0;
+                                    subjectMarks.forEach((m) => {
+                                      const name = m.subjectName || '-';
+                                      const max = m.max_marks != null && m.max_marks !== '' ? Number(m.max_marks) : 100;
+                                      if (maxBySubject[name] == null || max > maxBySubject[name]) maxBySubject[name] = max;
+                                      totalObtained += Number(m.marks_obtained) || 0;
+                                    });
+                                    const totalMax = Object.values(maxBySubject).reduce((s, m) => s + m, 0);
+                                    return (
+                                      <tr style={styles.totalRow}>
+                                        <td style={styles.subjectTd}>Total</td>
+                                        <td style={styles.subjectTd}>
+                                          {totalMax > 0 ? `${totalObtained} / ${totalMax}` : totalObtained}
+                                        </td>
+                                        <td style={styles.subjectTd}>
+                                          {totalMax > 0 ? `${((totalObtained / totalMax) * 100).toFixed(1)}%` : '-'}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })()}
                                 </tbody>
                               </table>
                             )}
@@ -439,6 +480,11 @@ const styles = {
   subjectTd: {
     padding: '8px 12px',
     borderBottom: '1px solid #eee',
+  },
+  totalRow: {
+    fontWeight: '600',
+    backgroundColor: '#f0f4f8',
+    borderTop: '2px solid #dee2e6',
   },
   loading: {
     textAlign: 'center',
