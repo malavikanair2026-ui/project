@@ -203,7 +203,7 @@ const ResultsView = () => {
               <th style={styles.th}>Department</th>
               <th style={styles.th}>Class</th>
               <th style={styles.th}>Semester</th>
-              <th style={styles.th}>Total Marks (out of)</th>
+              <th style={styles.th}>Total Marks</th>
               <th style={styles.th}>Percentage</th>
               <th style={styles.th}>Grade</th>
               <th style={styles.th}>SGPA</th>

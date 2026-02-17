@@ -7,7 +7,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 const PrincipalAnalytics = () => {
   const { selectedSemester } = usePrincipal();
   const [activeTab, setActiveTab] = useState('overview');
-  const [classFilter, setClassFilter] = useState('cs');
+  const [classFilter, setClassFilter] = useState('');
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState({
@@ -128,7 +128,8 @@ const PrincipalAnalytics = () => {
 
   const fetchRankings = async () => {
     try {
-      const response = await analyticsAPI.getRankings(selectedSemester, classFilter || undefined);
+      const filters = classFilter ? { class: classFilter } : {};
+      const response = await analyticsAPI.getRankings(selectedSemester, filters);
       setRankings(response.data);
     } catch (error) {
       console.error('Failed to fetch rankings:', error);
@@ -136,8 +137,8 @@ const PrincipalAnalytics = () => {
     }
   };
 
-  // Classes from same source as Class Management (classesAPI)
-  const uniqueClasses = classes.map((c) => c.class_name).filter(Boolean).sort();
+  // Classes from same source as Class Management (classesAPI) - use class _id for API filter
+  const classList = classes.filter((c) => c.class_name).sort((a, b) => (a.class_name || '').localeCompare(b.class_name || ''));
 
   if (loading && activeTab === 'overview') {
     return <LoadingSpinner />;
@@ -158,9 +159,9 @@ const PrincipalAnalytics = () => {
             style={styles.select}
           >
             <option value="">All Classes</option>
-            {uniqueClasses.map((cls) => (
-              <option key={cls} value={cls}>
-                {cls}
+            {classList.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.class_name}
               </option>
             ))}
           </select>
@@ -483,11 +484,11 @@ const PrincipalAnalytics = () => {
                       </td>
                       <td style={styles.td}>{ranking.studentId}</td>
                       <td style={{ ...styles.td, ...styles.nameCell }}>{ranking.name}</td>
-                      <td style={styles.td}>{(() => {
-                        const c = ranking.class;
-                        if (c != null && typeof c === 'object') return c.class_name ?? '-';
-                        return ranking.name && String(ranking.name).trim().toLowerCase().includes('sini') ? 'cs' : (c ?? 'cs');
-                      })()}</td>
+                      <td style={styles.td}>
+                        {ranking.class != null && typeof ranking.class === 'object'
+                          ? (ranking.class.class_name ?? '-')
+                          : (ranking.class ?? '-')}
+                      </td>
                       <td style={styles.td}>{ranking.section}</td>
                       <td style={styles.td}>{ranking.percentage.toFixed(2)}%</td>
                       <td style={styles.td}>

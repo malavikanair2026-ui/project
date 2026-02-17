@@ -69,10 +69,13 @@ const StaffResults = () => {
         const student = students.find(
           (s) => s._id === r.student?._id || s._id === r.student
         );
+        const nameStr = String(student?.name ?? '');
+        const idStr = String(student?.student_id ?? '');
+        const semesterStr = String(r.semester ?? '');
         return (
-          student?.name?.toLowerCase().includes(term) ||
-          student?.student_id?.toLowerCase().includes(term) ||
-          r.semester?.toLowerCase().includes(term)
+          nameStr.toLowerCase().includes(term) ||
+          idStr.toLowerCase().includes(term) ||
+          semesterStr.toLowerCase().includes(term)
         );
       });
     }
@@ -176,7 +179,7 @@ const StaffResults = () => {
               <th style={styles.th}>Class</th>
               <th style={styles.th}>Section</th>
               <th style={styles.th}>Semester</th>
-              <th style={styles.th}>Total Marks (out of)</th>
+              <th style={styles.th}>Total Marks</th>
               <th style={styles.th}>Percentage</th>
               <th style={styles.th}>Grade</th>
               <th style={styles.th}>Status</th>

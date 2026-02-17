@@ -73,11 +73,9 @@ const StaffStudents = () => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter((s) => {
-        const nameStr = typeof s.name === 'string' ? s.name : String(s.name ?? '');
-        const idStr = typeof s.student_id === 'string' ? s.student_id : String(s.student_id ?? '');
-        const classStr = typeof (s.class?.class_name ?? s.class) === 'string'
-          ? (s.class?.class_name ?? s.class)
-          : String(s.class?.class_name ?? s.class ?? '');
+        const nameStr = String(s.name ?? '');
+        const idStr = String(s.student_id ?? '');
+        const classStr = String(s.class?.class_name ?? s.class ?? '');
         return (
           nameStr.toLowerCase().includes(term) ||
           idStr.toLowerCase().includes(term) ||
