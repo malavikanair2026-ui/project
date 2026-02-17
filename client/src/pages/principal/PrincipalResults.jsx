@@ -113,13 +113,23 @@ const PrincipalResults = () => {
   const getTotalMaxFromSubjects = (result) => {
     const subjectMarks = getSubjectMarksForResult(result);
     if (!subjectMarks.length) return null;
-    const maxBySubject = {};
+    return subjectMarks.reduce(
+      (sum, m) => sum + (m.max_marks != null && m.max_marks !== '' ? Number(m.max_marks) : 0),
+      0
+    );
+  };
+
+  // Total obtained and max from subject-wise marks (so main table and expanded section match)
+  const getTotalFromSubjectMarks = (result) => {
+    const subjectMarks = getSubjectMarksForResult(result);
+    if (!subjectMarks.length) return null;
+    let totalObtained = 0;
+    let totalMax = 0;
     subjectMarks.forEach((m) => {
-      const name = m.subjectName || '-';
-      const max = m.max_marks != null && m.max_marks !== '' ? Number(m.max_marks) : 100;
-      if (maxBySubject[name] == null || max > maxBySubject[name]) maxBySubject[name] = max;
+      totalObtained += Number(m.marks_obtained) || 0;
+      totalMax += m.max_marks != null && m.max_marks !== '' ? Number(m.max_marks) : 0;
     });
-    return Object.values(maxBySubject).reduce((sum, m) => sum + m, 0);
+    return { totalObtained, totalMax };
   };
 
   const loadMarksForStudent = async (studentId, semester) => {
@@ -232,10 +242,13 @@ const PrincipalResults = () => {
                       <td style={styles.td}>{result.semester}</td>
                       <td style={styles.td}>
                         {(() => {
-                          const totalObtained = result.total_marks ?? 0;
-                          const totalMax = result.total_max_marks > 0
+                          const fromSubject = getTotalFromSubjectMarks(result);
+                          const totalObtained = fromSubject
+                            ? fromSubject.totalObtained
+                            : (result.total_marks ?? 0);
+                          const totalMax = fromSubject?.totalMax ?? (result.total_max_marks > 0
                             ? result.total_max_marks
-                            : getTotalMaxFromSubjects(result);
+                            : getTotalMaxFromSubjects(result));
                           if (totalMax != null && totalMax > 0) {
                             return `${totalObtained} / ${totalMax}`;
                           }
@@ -312,15 +325,9 @@ const PrincipalResults = () => {
                                     );
                                   })}
                                   {(() => {
-                                    const maxBySubject = {};
-                                    let totalObtained = 0;
-                                    subjectMarks.forEach((m) => {
-                                      const name = m.subjectName || '-';
-                                      const max = m.max_marks != null && m.max_marks !== '' ? Number(m.max_marks) : 100;
-                                      if (maxBySubject[name] == null || max > maxBySubject[name]) maxBySubject[name] = max;
-                                      totalObtained += Number(m.marks_obtained) || 0;
-                                    });
-                                    const totalMax = Object.values(maxBySubject).reduce((s, m) => s + m, 0);
+                                    const fromSubject = getTotalFromSubjectMarks(result);
+                                    const totalObtained = fromSubject?.totalObtained ?? 0;
+                                    const totalMax = fromSubject?.totalMax ?? 0;
                                     return (
                                       <tr style={styles.totalRow}>
                                         <td style={styles.subjectTd}>Total</td>

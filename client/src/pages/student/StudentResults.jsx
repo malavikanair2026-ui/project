@@ -67,10 +67,23 @@ const StudentResults = () => {
     return colors[status] || '#95a5a6';
   };
 
-  // Total maximum marks for a semester (sum of max_marks of all subjects in that semester's marks)
+  // Total maximum marks for a semester (sum of max_marks of all mark rows in that semester)
   const getMaxMarksForSemester = (semester) => {
     const semesterMarks = marks.filter((m) => (m.semester || '') === (semester || ''));
     return semesterMarks.reduce((sum, m) => sum + (m.subject?.max_marks || 0), 0);
+  };
+
+  // Total obtained and max from marks for a semester (so result cards and table total match)
+  const getTotalFromMarksForSemester = (semester) => {
+    const semesterMarks = marks.filter((m) => (m.semester || '') === (semester || ''));
+    if (!semesterMarks.length) return null;
+    let totalObtained = 0;
+    let totalMax = 0;
+    semesterMarks.forEach((m) => {
+      totalObtained += Number(m.marks_obtained) || 0;
+      totalMax += Number(m.subject?.max_marks) || 0;
+    });
+    return { totalObtained, totalMax };
   };
 
   const exportToPdf = () => {
@@ -100,15 +113,14 @@ const StudentResults = () => {
     doc.text('Result Summary', 14, y);
     y += 10;
 
-    const getMaxForSemester = (sem) =>
-      marks.filter((m) => (m.semester || '') === (sem || '')).reduce((s, m) => s + (m.subject?.max_marks || 0), 0);
-
     autoTable(doc, {
       startY: y,
       head: [['Semester', 'Total Marks', 'Percentage', 'Grade', 'SGPA', 'Status']],
       body: results.map((r) => {
-        const maxM = getMaxForSemester(r.semester);
-        const totalStr = maxM > 0 ? `${r.total_marks ?? '-'} / ${maxM}` : String(r.total_marks ?? '-');
+        const fromMarks = getTotalFromMarksForSemester(r.semester);
+        const totalObtained = fromMarks ? fromMarks.totalObtained : (r.total_marks ?? '-');
+        const maxM = fromMarks?.totalMax ?? marks.filter((m) => (m.semester || '') === (r.semester || '')).reduce((s, m) => s + (m.subject?.max_marks || 0), 0);
+        const totalStr = maxM > 0 ? `${totalObtained} / ${maxM}` : String(totalObtained);
         return [
           r.semester || '-',
           totalStr,
@@ -205,9 +217,11 @@ const StudentResults = () => {
         <>
           <div style={styles.resultsGrid}>
             {results.map((result) => {
-              const maxMarks = result.total_max_marks > 0
+              const fromMarks = getTotalFromMarksForSemester(result.semester);
+              const totalObtained = fromMarks ? fromMarks.totalObtained : (result.total_marks ?? 0);
+              const totalMax = fromMarks?.totalMax ?? (result.total_max_marks > 0
                 ? result.total_max_marks
-                : getMaxMarksForSemester(result.semester);
+                : getMaxMarksForSemester(result.semester));
               return (
               <div key={result._id} style={styles.resultCard}>
                 <div style={styles.resultHeader}>
@@ -225,8 +239,8 @@ const StudentResults = () => {
                   <div style={styles.resultRow}>
                     <span>Total Marks:</span>
                     <strong>
-                      {result.total_marks}
-                      {maxMarks > 0 ? ` / ${maxMarks}` : ''}
+                      {totalObtained}
+                      {totalMax > 0 ? ` / ${totalMax}` : ''}
                     </strong>
                   </div>
                   <div style={styles.resultRow}>
@@ -278,6 +292,23 @@ const StudentResults = () => {
                         <td style={styles.td}>{mark.semester || 'N/A'}</td>
                       </tr>
                     ))}
+                    {marks.length > 0 && (() => {
+                      let sumObtained = 0;
+                      let sumMax = 0;
+                      marks.forEach((m) => {
+                        sumObtained += Number(m.marks_obtained) || 0;
+                        sumMax += Number(m.subject?.max_marks) || 0;
+                      });
+                      return (
+                        <tr style={styles.totalRow}>
+                          <td style={styles.td}><strong>Total</strong></td>
+                          <td style={styles.td}><strong>{sumObtained}</strong></td>
+                          <td style={styles.td}><strong>{sumMax}</strong></td>
+                          <td style={styles.td}></td>
+                          <td style={styles.td}></td>
+                        </tr>
+                      );
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -367,6 +398,11 @@ const styles = {
     justifyContent: 'space-between',
     padding: '8px 0',
     borderBottom: '1px solid #f0f0f0',
+  },
+  totalRow: {
+    fontWeight: '600',
+    backgroundColor: '#f8f9fa',
+    borderTop: '2px solid #dee2e6',
   },
   gradeBadge: {
     padding: '4px 12px',
