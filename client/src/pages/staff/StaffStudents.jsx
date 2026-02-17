@@ -72,12 +72,18 @@ const StaffStudents = () => {
     }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (s) =>
-          s.name?.toLowerCase().includes(term) ||
-          s.student_id?.toLowerCase().includes(term) ||
-          (s.class?.class_name || s.class)?.toLowerCase?.()?.includes?.(term)
-      );
+      filtered = filtered.filter((s) => {
+        const nameStr = typeof s.name === 'string' ? s.name : String(s.name ?? '');
+        const idStr = typeof s.student_id === 'string' ? s.student_id : String(s.student_id ?? '');
+        const classStr = typeof (s.class?.class_name ?? s.class) === 'string'
+          ? (s.class?.class_name ?? s.class)
+          : String(s.class?.class_name ?? s.class ?? '');
+        return (
+          nameStr.toLowerCase().includes(term) ||
+          idStr.toLowerCase().includes(term) ||
+          classStr.toLowerCase().includes(term)
+        );
+      });
     }
 
     return filtered;
