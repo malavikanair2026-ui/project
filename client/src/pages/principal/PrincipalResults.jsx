@@ -116,7 +116,7 @@ const PrincipalResults = () => {
               <th style={styles.th}>Class</th>
               <th style={styles.th}>Section</th>
               <th style={styles.th}>Semester</th>
-              <th style={styles.th}>Total Marks</th>
+              <th style={styles.th}>Total Marks (out of)</th>
               <th style={styles.th}>Percentage</th>
               <th style={styles.th}>Grade</th>
               <th style={styles.th}>Status</th>
@@ -142,7 +142,11 @@ const PrincipalResults = () => {
                     <td style={styles.td}>{student?.class != null && typeof student.class === 'object' ? (student.class.class_name ?? '-') : (student?.class ?? 'cs')}</td>
                     <td style={styles.td}>{student?.section || '-'}</td>
                     <td style={styles.td}>{result.semester}</td>
-                    <td style={styles.td}>{result.total_marks}</td>
+                    <td style={styles.td}>
+                      {result.total_max_marks > 0
+                        ? `${result.total_marks ?? 0} / ${result.total_max_marks}`
+                        : (result.total_marks ?? '-')}
+                    </td>
                     <td style={styles.td}>{result.percentage.toFixed(2)}%</td>
                     <td style={styles.td}>
                       <span

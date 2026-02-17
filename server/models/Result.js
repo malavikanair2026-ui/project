@@ -17,6 +17,10 @@ const resultSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    total_max_marks: {
+      type: Number,
+      default: 0,
+    },
     percentage: {
       type: Number,
       required: true,

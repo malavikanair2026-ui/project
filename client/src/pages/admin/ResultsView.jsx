@@ -138,7 +138,7 @@ const ResultsView = () => {
               <th style={styles.th}>Department</th>
               <th style={styles.th}>Class</th>
               <th style={styles.th}>Semester</th>
-              <th style={styles.th}>Total Marks</th>
+              <th style={styles.th}>Total Marks (out of)</th>
               <th style={styles.th}>Percentage</th>
               <th style={styles.th}>Grade</th>
               <th style={styles.th}>SGPA</th>
@@ -162,7 +162,11 @@ const ResultsView = () => {
                   <td style={styles.td}>{departmentName(result.student?.department)}</td>
                   <td style={styles.td}>{className(result.student?.class)}</td>
                   <td style={styles.td}>{result.semester}</td>
-                  <td style={styles.td}>{result.total_marks}</td>
+                  <td style={styles.td}>
+                    {result.total_max_marks > 0
+                      ? `${result.total_marks ?? 0} / ${result.total_max_marks}`
+                      : (result.total_marks ?? '-')}
+                  </td>
                   <td style={styles.td}>{result.percentage.toFixed(2)}%</td>
                   <td style={styles.td}>
                     <span

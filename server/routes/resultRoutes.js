@@ -35,6 +35,7 @@ const calculateStudentResult = async (studentId, semester) => {
       student: studentId,
       semester: semester || 'N/A',
       total_marks: totalMarks,
+      total_max_marks: maxMarks,
       percentage,
       grade,
       sgpa,

@@ -205,7 +205,9 @@ const StudentResults = () => {
         <>
           <div style={styles.resultsGrid}>
             {results.map((result) => {
-              const maxMarks = getMaxMarksForSemester(result.semester);
+              const maxMarks = result.total_max_marks > 0
+                ? result.total_max_marks
+                : getMaxMarksForSemester(result.semester);
               return (
               <div key={result._id} style={styles.resultCard}>
                 <div style={styles.resultHeader}>

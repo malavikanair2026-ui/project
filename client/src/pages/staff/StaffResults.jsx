@@ -112,6 +112,13 @@ const StaffResults = () => {
     return (marksByStudent[key] || []).filter((m) => m.semester === semester);
   };
 
+  const getTotalMaxMarks = (result) => {
+    const subjectMarks = getSubjectWiseMarks(result);
+    const fromMarks = subjectMarks.reduce((sum, m) => sum + (Number(m.max_marks) || 0), 0);
+    if (fromMarks > 0) return fromMarks;
+    return result.total_max_marks || 0;
+  };
+
   const uniqueClasses = [...new Set(students.map((s) => s.class?.class_name || s.class).filter(Boolean))];
   const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
 
@@ -169,7 +176,7 @@ const StaffResults = () => {
               <th style={styles.th}>Class</th>
               <th style={styles.th}>Section</th>
               <th style={styles.th}>Semester</th>
-              <th style={styles.th}>Total Marks</th>
+              <th style={styles.th}>Total Marks (out of)</th>
               <th style={styles.th}>Percentage</th>
               <th style={styles.th}>Grade</th>
               <th style={styles.th}>Status</th>
@@ -212,7 +219,14 @@ const StaffResults = () => {
                       <td style={styles.td}>{student?.class?.class_name || student?.class || '-'}</td>
                       <td style={styles.td}>{student?.section || '-'}</td>
                       <td style={styles.td}>{result.semester}</td>
-                      <td style={styles.td}>{result.total_marks}</td>
+                      <td style={styles.td}>
+                        {(() => {
+                          const totalMax = getTotalMaxMarks(result);
+                          return totalMax > 0
+                            ? `${result.total_marks ?? 0} / ${totalMax}`
+                            : (result.total_marks ?? '-');
+                        })()}
+                      </td>
                       <td style={styles.td}>{result.percentage?.toFixed(2)}%</td>
                       <td style={styles.td}>
                         <span

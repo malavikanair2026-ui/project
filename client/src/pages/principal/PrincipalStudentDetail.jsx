@@ -176,7 +176,11 @@ const PrincipalStudentDetail = () => {
                   <div style={styles.resultStats}>
                     <div style={styles.resultStat}>
                       <span style={styles.resultStatLabel}>Total Marks</span>
-                      <span style={styles.resultStatValue}>{result.total_marks}</span>
+                      <span style={styles.resultStatValue}>
+                        {result.total_max_marks > 0
+                          ? `${result.total_marks ?? 0} / ${result.total_max_marks}`
+                          : (result.total_marks ?? '-')}
+                      </span>
                     </div>
                     <div style={styles.resultStat}>
                       <span style={styles.resultStatLabel}>Percentage</span>
