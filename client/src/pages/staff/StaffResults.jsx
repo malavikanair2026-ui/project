@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { resultsAPI, studentsAPI } from '../../services/api';
+import { resultsAPI, studentsAPI, marksAPI } from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const StaffResults = () => {
   const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [students, setStudents] = useState([]);
+  const [marksByStudent, setMarksByStudent] = useState({});
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
   const [filterSemester, setFilterSemester] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedResultId, setExpandedResultId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -22,12 +24,23 @@ const StaffResults = () => {
         resultsAPI.getAll(),
         studentsAPI.getAll(),
       ]);
-      setResults(Array.isArray(resultsRes?.data) ? resultsRes.data : []);
-      setStudents(Array.isArray(studentsRes?.data) ? studentsRes.data : []);
+      const resultsList = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
+      const studentsList = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
+      setResults(resultsList);
+      setStudents(studentsList);
+
+      const studentIds = [...new Set(resultsList.map((r) => String(r.student?._id || r.student)).filter(Boolean))];
+      if (studentIds.length > 0) {
+        const marksRes = await marksAPI.getByStudentIds(studentIds);
+        setMarksByStudent(marksRes?.data || {});
+      } else {
+        setMarksByStudent({});
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       setResults([]);
       setStudents([]);
+      setMarksByStudent({});
     } finally {
       setLoading(false);
     }
@@ -90,6 +103,15 @@ const StaffResults = () => {
     return '#e74c3c';
   };
 
+  const getSubjectWiseMarks = (result) => {
+    const studentId = result.student?._id || result.student;
+    const semester = result.semester;
+    if (!studentId) return [];
+    const key = String(studentId);
+    if (!marksByStudent[key]) return [];
+    return (marksByStudent[key] || []).filter((m) => m.semester === semester);
+  };
+
   const uniqueClasses = [...new Set(students.map((s) => s.class?.class_name || s.class).filter(Boolean))];
   const uniqueSemesters = [...new Set(results.map((r) => r.semester))].filter(Boolean);
 
@@ -142,6 +164,7 @@ const StaffResults = () => {
         <table style={styles.table}>
           <thead>
             <tr>
+              <th style={styles.th}></th>
               <th style={styles.th}>Student Name</th>
               <th style={styles.th}>Class</th>
               <th style={styles.th}>Section</th>
@@ -155,7 +178,7 @@ const StaffResults = () => {
           <tbody>
             {filteredResults.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ ...styles.td, ...styles.noData }}>
+                <td colSpan="9" style={{ ...styles.td, ...styles.noData }}>
                   No results found
                 </td>
               </tr>
@@ -164,40 +187,97 @@ const StaffResults = () => {
                 const student = students.find(
                   (s) => s._id === result.student?._id || s._id === result.student
                 );
+                const subjectMarks = getSubjectWiseMarks(result);
+                const isExpanded = expandedResultId === result._id;
                 return (
-                  <tr key={result._id} style={styles.tableRow}>
-                    <td style={{ ...styles.td, ...styles.nameCell }}>{student?.name || result.student?.name || '-'}</td>
-                    <td style={styles.td}>{student?.class?.class_name || student?.class || 'cs'}</td>
-                    <td style={styles.td}>{student?.section || '-'}</td>
-                    <td style={styles.td}>{result.semester}</td>
-                    <td style={styles.td}>{result.total_marks}</td>
-                    <td style={styles.td}>{result.percentage.toFixed(2)}%</td>
-                    <td style={styles.td}>
-                      <span
-                        style={{
-                          ...styles.gradeBadge,
-                          backgroundColor: getGradeColor(result.grade),
-                        }}
-                      >
-                        {result.grade}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span
-                        style={{
-                          ...styles.statusBadge,
-                          backgroundColor:
-                            result.status === 'approved'
-                              ? '#27ae60'
-                              : result.status === 'pending'
-                              ? '#f39c12'
-                              : '#e74c3c',
-                        }}
-                      >
-                        {result.status}
-                      </span>
-                    </td>
-                  </tr>
+                  <React.Fragment key={result._id}>
+                    <tr
+                      style={styles.tableRow}
+                      onClick={() => setExpandedResultId(isExpanded ? null : result._id)}
+                    >
+                      <td style={styles.td}>
+                        <button
+                          type="button"
+                          style={styles.expandBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedResultId(isExpanded ? null : result._id);
+                          }}
+                          title={isExpanded ? 'Hide subject-wise marks' : 'Show subject-wise marks'}
+                        >
+                          {isExpanded ? '▼' : '▶'}
+                        </button>
+                      </td>
+                      <td style={{ ...styles.td, ...styles.nameCell }}>{student?.name || result.student?.name || '-'}</td>
+                      <td style={styles.td}>{student?.class?.class_name || student?.class || '-'}</td>
+                      <td style={styles.td}>{student?.section || '-'}</td>
+                      <td style={styles.td}>{result.semester}</td>
+                      <td style={styles.td}>{result.total_marks}</td>
+                      <td style={styles.td}>{result.percentage?.toFixed(2)}%</td>
+                      <td style={styles.td}>
+                        <span
+                          style={{
+                            ...styles.gradeBadge,
+                            backgroundColor: getGradeColor(result.grade),
+                          }}
+                        >
+                          {result.grade}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span
+                          style={{
+                            ...styles.statusBadge,
+                            backgroundColor:
+                              result.status === 'approved'
+                                ? '#27ae60'
+                                : result.status === 'pending'
+                                ? '#f39c12'
+                                : '#e74c3c',
+                          }}
+                        >
+                          {result.status}
+                        </span>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${result._id}-details`}>
+                        <td colSpan="9" style={{ ...styles.td, padding: 0, verticalAlign: 'top' }}>
+                          <div style={styles.subjectWisePanel}>
+                            <h4 style={styles.subjectWiseTitle}>Subject-wise Marks</h4>
+                            {subjectMarks.length === 0 ? (
+                              <p style={styles.subjectWiseEmpty}>No subject-wise marks found for this semester.</p>
+                            ) : (
+                              <table style={styles.subjectTable}>
+                                <thead>
+                                  <tr>
+                                    <th style={styles.subjectTh}>Subject</th>
+                                    <th style={styles.subjectTh}>Marks Obtained</th>
+                                    <th style={styles.subjectTh}>Max Marks</th>
+                                    <th style={styles.subjectTh}>Percentage</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {subjectMarks.map((m, idx) => {
+                                    const max = m.max_marks ?? 100;
+                                    const pct = max > 0 ? ((m.marks_obtained / max) * 100).toFixed(1) : '-';
+                                    return (
+                                      <tr key={idx}>
+                                        <td style={styles.subjectTd}>{m.subjectName}</td>
+                                        <td style={styles.subjectTd}>{m.marks_obtained}</td>
+                                        <td style={styles.subjectTd}>{max}</td>
+                                        <td style={styles.subjectTd}>{pct === '-' ? '-' : `${pct}%`}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })
             )}
@@ -221,6 +301,19 @@ const styles = {
     fontSize: '28px',
     color: '#2c3e50',
     margin: 0,
+  },
+  filters: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  searchInput: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '16px',
+    minWidth: '200px',
   },
   select: {
     padding: '8px 12px',
@@ -283,6 +376,48 @@ const styles = {
   tableRow: {
     cursor: 'pointer',
     transition: 'background 0.2s',
+  },
+  expandBtn: {
+    padding: '4px 8px',
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: '#2c3e50',
+  },
+  subjectWisePanel: {
+    padding: '16px 24px',
+    backgroundColor: '#f8f9fa',
+    borderTop: '1px solid #dee2e6',
+  },
+  subjectWiseTitle: {
+    margin: '0 0 12px 0',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  subjectWiseEmpty: {
+    margin: 0,
+    fontSize: '14px',
+    color: '#7f8c8d',
+  },
+  subjectTable: {
+    width: '100%',
+    maxWidth: '500px',
+    borderCollapse: 'collapse',
+    fontSize: '14px',
+  },
+  subjectTh: {
+    padding: '8px 12px',
+    textAlign: 'left',
+    fontWeight: '600',
+    color: '#2c3e50',
+    borderBottom: '1px solid #dee2e6',
+    backgroundColor: '#fff',
+  },
+  subjectTd: {
+    padding: '8px 12px',
+    borderBottom: '1px solid #eee',
   },
 };
 
