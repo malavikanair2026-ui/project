@@ -83,13 +83,16 @@ const Analytics = () => {
 
   const fetchOverview = async () => {
     try {
+      const resultParams = { ...analyticsFilters() };
+      if (semesterFilter && String(semesterFilter).trim()) resultParams.semester = String(semesterFilter).trim();
       const [resultsRes, studentsRes] = await Promise.all([
-        resultsAPI.getAll(),
+        resultsAPI.getAll(resultParams),
         studentsAPI.getAll(analyticsFilters()),
       ]);
       const resultsList = Array.isArray(resultsRes?.data) ? resultsRes.data : [];
+      const semesterNorm = semesterFilter ? String(semesterFilter).trim() : '';
       const results = resultsList
-        .filter((r) => !semesterFilter || r.semester === semesterFilter)
+        .filter((r) => !semesterNorm || String(r.semester ?? '').trim() === semesterNorm)
         .filter((r) => r.student?.name);
       const students = Array.isArray(studentsRes?.data) ? studentsRes.data : [];
 
@@ -133,7 +136,8 @@ const Analytics = () => {
 
   const fetchClassPerformance = async () => {
     try {
-      const response = await analyticsAPI.getClassPerformance(semesterFilter, analyticsFilters());
+      const sem = semesterFilter ? String(semesterFilter).trim() : '';
+      const response = await analyticsAPI.getClassPerformance(sem || undefined, analyticsFilters());
       setClassPerformance(response.data || {});
     } catch (error) {
       console.error('Failed to fetch class performance:', error);
@@ -143,7 +147,8 @@ const Analytics = () => {
 
   const fetchSubjectAnalysis = async () => {
     try {
-      const response = await analyticsAPI.getSubjectAnalysis(semesterFilter, analyticsFilters());
+      const sem = semesterFilter ? String(semesterFilter).trim() : '';
+      const response = await analyticsAPI.getSubjectAnalysis(sem || undefined, analyticsFilters());
       setSubjectAnalysis(response.data);
     } catch (error) {
       console.error('Failed to fetch subject analysis:', error);
@@ -153,7 +158,8 @@ const Analytics = () => {
 
   const fetchRankings = async () => {
     try {
-      const response = await analyticsAPI.getRankings(semesterFilter, analyticsFilters());
+      const sem = semesterFilter ? String(semesterFilter).trim() : '';
+      const response = await analyticsAPI.getRankings(sem || undefined, analyticsFilters());
       setRankings(response.data);
     } catch (error) {
       console.error('Failed to fetch rankings:', error);

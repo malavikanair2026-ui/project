@@ -20,7 +20,7 @@ router.get('/class-performance', async (req, res) => {
   try {
     const { semester, course, department, class: classId } = req.query;
     const filter = {};
-    if (semester) filter.semester = semester;
+    if (semester) filter.semester = String(semester).trim();
 
     const studentFilter = studentFilterFromQuery(req.query);
 
@@ -137,7 +137,7 @@ router.get('/section-performance', async (req, res) => {
   try {
     const { semester } = req.query;
     const filter = {};
-    if (semester) filter.semester = semester;
+    if (semester) filter.semester = String(semester).trim();
 
     const studentFilter = studentFilterFromQuery(req.query);
 
@@ -207,7 +207,7 @@ router.get('/subject-analysis', async (req, res) => {
   try {
     const { semester } = req.query;
     const filter = {};
-    if (semester) filter.semester = semester;
+    if (semester) filter.semester = String(semester).trim();
 
     const studentFilter = studentFilterFromQuery(req.query);
     let studentIds = null;
@@ -290,7 +290,7 @@ router.get('/rankings', async (req, res) => {
   try {
     const { semester, course, department, class: classId } = req.query;
     const filter = {};
-    if (semester) filter.semester = semester;
+    if (semester) filter.semester = String(semester).trim();
 
     const studentFilter = studentFilterFromQuery(req.query);
 
@@ -349,7 +349,7 @@ router.get('/toppers', async (req, res) => {
   try {
     const { limit = 10, semester, course, department, class: classId } = req.query;
     const filter = {};
-    if (semester) filter.semester = semester;
+    if (semester) filter.semester = String(semester).trim();
 
     const studentFilter = studentFilterFromQuery(req.query);
     if (Object.keys(studentFilter).length > 0) {
@@ -391,7 +391,7 @@ router.get('/pass-fail', async (req, res) => {
   try {
     const { semester } = req.query;
     const filter = {};
-    if (semester) filter.semester = semester;
+    if (semester) filter.semester = String(semester).trim();
 
     const studentFilter = studentFilterFromQuery(req.query);
 

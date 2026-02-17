@@ -71,7 +71,7 @@ router.get('/', async (req, res) => {
       if (studentIds.length === 0) return res.json([]);
       filter.student = { $in: studentIds };
     }
-    if (semester) filter.semester = semester;
+    if (semester) filter.semester = String(semester).trim();
 
     const results = await Result.find(filter)
       .populate({
@@ -93,7 +93,7 @@ router.get('/', async (req, res) => {
 router.get('/:studentId', async (req, res) => {
   try {
     const filter = { student: req.params.studentId };
-    if (req.query.semester) filter.semester = req.query.semester;
+    if (req.query.semester) filter.semester = String(req.query.semester).trim();
 
     // If semester is specified, return single result; otherwise return all
     if (req.query.semester) {
