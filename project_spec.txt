@@ -4,249 +4,358 @@ STUDENT RESULT ANALYZER
 
 Project Title: STUDENT RESULT ANALYZER
 Tech Stack: MERN (MongoDB, Express, React, Node.js)
+API Base: All backend APIs are prefixed with /api/ (e.g. /api/auth/login).
 
 2. PROBLEM STATEMENT
 
 In many educational institutions, student examination results are often managed manually or using basic tools like spreadsheets. This approach can be time-consuming, error-prone, and inefficient, especially when handling large numbers of students and multiple subjects. Generating reports such as pass/fail status, grade distribution, subject-wise performance, and overall class analysis becomes difficult and lacks accuracy.
 There is a need for a computerized system that can store student details, process examination marks, calculate total marks, percentages, grades, and analyze performance efficiently. The system should also provide quick access to individual student results as well as overall analytical reports for teachers and administrators.
 
-3.PROPOSED SYSTEM
+3. PROPOSED SYSTEM
 
-The Proposed Student Result Analyzer System is designed to overcome the limitations of traditional manual result processing and provide a smart, efficient, and accurate way to evaluate students’ academic performance. The system uses digital tools, data processing techniques, and visual insights to help teachers, administrators, and students better understand academic outcomes.
-
-
-
-
+The Proposed Student Result Analyzer System is designed to overcome the limitations of traditional manual result processing and provide a smart, efficient, and accurate way to evaluate students' academic performance. The system uses digital tools, data processing techniques, and visual insights to help teachers, administrators, and students better understand academic outcomes.
 
 Features of Proposed System
 
-a)	Automated Result Calculation
-Auto-compute total marks, grades, SGPA/CGPA, and percentages. Minimizes human errors in manual calculation.
-b)	Performance Analysis 
-Subject-wise and student-wise performance charts.
- Identify strong/weak areas using visual analytics.
- Trend analysis across semesters.
-c)	Data Visualization
- Bar charts, pie charts, line graphs, and heat maps.
- Comparison between class average and individual student scores.
-d)	Report Generation 
-Automated generation of mark sheets, grade cards, and progress reports. 
-Export to PDF / Excel. 
-e)	Admin&Faculty Dashboard
- Upload marks in bulk using Excel or CSV. 
-Manage student records. 
-Track class performance and pass/fail ratios.
-f)	Student Portal
- Students can log in to view their marks, grades, and performance insights. Personalized feedback based on results.
-g)	Alerts&Suggestions
- System flags low-performing students.
- Automated academic suggestions (e.g., “Improve in Mathematics based on low score trend”).
- 
+a) Automated Result Calculation
+   Auto-compute total marks, grades, SGPA/CGPA, and percentages. Minimizes human errors in manual calculation.
+b) Performance Analysis
+   Subject-wise and student-wise performance charts.
+   Identify strong/weak areas using visual analytics.
+   Trend analysis across semesters.
+c) Data Visualization
+   Bar charts, pie charts, line graphs, and heat maps.
+   Comparison between class average and individual student scores.
+d) Report Generation
+   Automated generation of mark sheets, grade cards, and progress reports.
+   Export to PDF / Excel.
+e) Admin & Faculty Dashboard
+   Upload marks in bulk using Excel or CSV.
+   Manage student records.
+   Track class performance and pass/fail ratios.
+f) Student Portal
+   Students can log in to view their marks, grades, and performance insights. Personalized feedback based on results.
+g) Alerts & Suggestions
+   System flags low-performing students.
+   Automated academic suggestions (e.g., "Improve in Mathematics based on low score trend").
 
 4. USER ROLES & PERMISSIONS
 
+1. Admin
+2. Principal
+3. Staff
+4. Teacher
+5. Student
 
-1.Admin 
-2.Principal
-3.Staff
-4.Teacher
-5.Student
+ADMIN
+- Add, update, delete Principal/staff/teacher/student accounts
+- Assign roles & permissions
+- Manage student information
+- Create/modify subject lists
+- View all students' results
+- Approve or freeze results
+- Manage grading schemas and pass criteria
+- Class-wise performance report
+- Subject-wise analysis
+- Toppers list & rank generation
 
-1.ADMIN	
+PRINCIPAL
+- Login & Profile Management
+- View results of students
+- Analyze performance of students
+- Monitor subject-wise performance of students
 
-1.Add update, delete Principal/staff/teacher/student accounts 
-2.Assign roles & permissions
-3.Manage student information 
-4. Create/modify subject lists
-5. View all students’ results
-6.Approve or freeze results
-7.Manage grading schemas and pass criteria
-8. Class-wise performance report 
-9.Subject-wise analysis 
-10.Toppers list & rank generation
+STAFF
+- Login & Profile Management
+- Enter marks of students
+- View final results of students
 
-2.PRINCIPAL 
+TEACHER
+- Login & Profile Management
+- View assigned classes and subjects
+- Access student lists for teaching groups
+- Enter student marks for exams/tests
+- Edit/update marks before final submission
+- View student performance
+- Analyze class performance
+- View automated analytics (graphs/charts)
+- Share feedback
+- Send notifications to students
+- View and respond to student queries
 
-1.Login & Profile Management
-2.View results of students 
-3.Analyze performance of students 
-4.Monitor subject wise performance of students
+STUDENT
+- Secure login
+- Overview of academic performance
+- Profile Viewing (including change password)
+- View results
+- Subject-wise performance
+- Graphs showing progress over time
+- Strengths and weaknesses
+- Alerts for new results
+- Announcements from teachers/admin
+- Send queries or feedback to teachers
+- View feedback from teachers
 
-3.STAFF 
+5. DATABASE STRUCTURE (Implemented Schemas – MongoDB/Mongoose)
 
-1.Login & Profile Management
-2.Enter marks of students 
-3.View final results of students
+Hierarchy: Course → Department → Class → Student. Subjects are linked to Class.
 
+A. User
+   - name (String, required)
+   - email (String, unique, required)
+   - password (String, hashed with bcrypt, min 6 chars)
+   - role (String: 'admin' | 'principal' | 'staff' | 'teacher' | 'student')
+   - timestamps
 
+B. Course
+   - course_name (String, required)
+   - course_code (String, optional)
 
- 
-4.TEACHER 
+C. Department
+   - department_name (String, required)
+   - department_code (String, optional)
+   - course (ObjectId ref Course, required)
 
-1.Login & Profile Management 
-2. View assigned classes and subjects
-3.Access student lists for teaching groups 
-4. Enter student marks for exams/tests 
-5.Edit/update marks before final submission
-6. View student performance 
-7.Analyze class performance 
-8.View automated analytics (graphs/charts) 
-9.Share feedback 
-10. Send notifications to students
+D. Class
+   - class_id (Number, unique, required)
+   - class_name (String, required, unique)
+   - department (ObjectId ref Department, optional)
+   - subjects: [{ subject (ref Subject), teacher (ref User) }]
+   - class_teacher (ObjectId ref User, optional)
+   - assigned_teachers (Array of ObjectId ref User)
+   - semesters: [{ semester_name, start_date, end_date, is_active }]
+   - timestamps
 
-5.STUDENT 
+E. Student
+   - student_id (Number, unique, required)
+   - user (ObjectId ref User, required)
+   - name (String, required)
+   - course (ObjectId ref Course, optional)
+   - department (ObjectId ref Department, optional)
+   - class (ObjectId ref Class, required)
+   - section (String, required)
+   - dob (Date, required)
+   - timestamps
 
-1.Secure login 
-2.Overview of academic performance 
-3. Profile Viewing 
-4.View results
-5. Subject-wise performance 
-6.Graphs showing progress over time
-7.Strengths and weaknesses 
-8. Alerts for new results
-9.Announcements from teachers/admin 
-10. Send queries or feedback to teachers
+F. Subject
+   - subject_id (Number, unique, required)
+   - subject_name (String, required, unique)
+   - max_marks (Number, required, default 100)
+   - class (ObjectId ref Class, required)
+   - timestamps
 
+G. Marks
+   - student (ObjectId ref Student, required)
+   - subject (ObjectId ref Subject, required)
+   - marks_obtained (Number, required, min 0)
+   - exam_type ('midterm' | 'final' | 'assignment' | 'quiz', default 'final')
+   - semester (String, optional)
+   - is_final (Boolean, default false)
+   - entered_by (ObjectId ref User, optional)
+   - Unique index: student + subject + exam_type + semester
+   - timestamps
 
-5. DATABASE STRUCTURE (Schemas)
+H. Result
+   - student (ObjectId ref Student, required)
+   - semester (String, required)
+   - total_marks, total_max_marks (Number)
+   - percentage (Number), grade (String: A+, A, B+, B, C+, C, D, F)
+   - sgpa, cgpa (Number)
+   - status ('pending' | 'approved' | 'frozen'), approved_by (ObjectId ref User)
+   - Unique index: student + semester
+   - timestamps
 
-A. User Schema:
-   - name (String)
-   - email (String, Unique)
-   - password (Hashed)
-   - role (String:  'admin'/’principal’/’staff’/’teacher’/’student’)
-B. Student :
-    -student_id(int)
-    -name(String)
-     -class(String)
-     -section(String)
-     -dob(Date)
-C.Subject
-   -subject_id(Int)
-   -subject_name(String)
-   -max_marks(Int) 
-D.marks
-   -mark_id(Int)
-   -student_id(Int) FK
-   -subject_id(Int)  FK
-   -marks_obtained(Int)
-E.result
-   -result_id(Int)
-   -student_id(Int) FK
-   -total_marks(Int)
-   -percentage(Decimal)
-    -grade(Char)
-F.teacher
-  -teacher_id(Int)
-  -teacher_name(String)
-G.class
- -class_id(Int)
- -class_name(String)
- -subject_id(Int) FK
- -teacher_id(Int) FK
-H.Feedback
- -f_id(Int)
--teacher_id(Int) FK
--student_id(Int) FK
--feedback(varchar)
+I. Feedback
+   - teacher (ObjectId ref User, required)
+   - student (ObjectId ref Student, required)
+   - feedback (String, required)
+   - feedback_type ('academic' | 'behavioral' | 'general', default 'academic')
+   - timestamps
 
-6. FEATURE WORKFLOW (The "User Journey")
+J. Notification
+   - title (String, required), message (String, required)
+   - sender (ObjectId ref User, required)
+   - recipients (Array of ObjectId ref Student)
+   - is_read (Boolean, default false)
+   - notification_type ('result' | 'announcement' | 'feedback' | 'general')
+   - timestamps
 
-User Journey-Admin
---------------------------
-1. Login: Admin logs in and lands on the "Menu Page".
-2.Add: Add Principal, staffs and teachers
-3.Create: Create classes & subjects
-4.Register: Students
-5.Assign: Assigns subjects to classes
-6.Review: Review overall results
+K. Query (Student-to-Teacher)
+   - student (ObjectId ref Student, required)
+   - teacher (ObjectId ref User, optional)
+   - subject (String, optional)
+   - query (String, required)
+   - response (String, optional – teacher's reply)
+   - status ('pending' | 'answered')
+   - timestamps
+
+L. GradingSchema
+   - name (String, required, unique)
+   - is_active (Boolean, default true) – only one active at a time
+   - grade_ranges: [{ grade, min_percentage, max_percentage, grade_point }]
+   - pass_percentage (Number, default 33)
+   - created_by (ObjectId ref User, optional)
+   - timestamps
+
+6. FEATURE WORKFLOW (User Journey)
+
+User Journey – Admin
+- Login → Menu/Dashboard.
+- Add Principal, staff, teachers (via Users).
+- Create Courses, Departments, Classes, Subjects.
+- Register Students (link to User + Class/Course/Department).
+- Assign subjects and teachers to classes.
+- Review results; approve/freeze result status.
+- Manage grading schemas.
+- View analytics (class performance, toppers, pass-fail, rankings).
 
 User Journey – Principal
--------------------------------
-1.	Login: Principal logs in and lands on the "Menu Page".
-2.	Browse: Principal sees a list of options (fetched from DB).
-3.	View: Students list
-4.	Browse: Principal sees results of students
-5.	Analyze: Performance of students
+- Login → Menu Page.
+- View students list, student detail (principal/student/:studentId).
+- View results of students.
+- Analyze performance (analytics).
 
 User Journey – Staff
----------------------------
-     1.Login: Staff logs in and lands on the "Menu Page".
-     2.Browse: Staff sees a list of students
-     3.Enter: Enter marks of students
-     4.View: Final results of students
- 
+- Login → Menu Page.
+- View students list.
+- Enter marks for students.
+- View final results.
 
-User Journey – Teachers
-------------------------------------
-1.Login: Teacher logs in and lands on the "Menu Page".
-2.Browse: Sees a list of options
-3.View: Assigned classes and subjects
-4.View: Students list
-5.Enter: Enter marks
-6.Update: Edit/Update marks for final submission
-7.View: Student performance 
-8.Analyze: Class performance
-9.View: Automated analytics(graphs/charts)
-10.Feedback: Share feedback to students
-11.Notifications: Send notifications to students
+User Journey – Teacher
+- Login → Menu Page.
+- View assigned classes and subjects.
+- View students list; enter/edit marks.
+- View student performance and class performance; view analytics.
+- Share feedback; send notifications.
+- View and respond to student queries.
 
-User Journey-Student
----------------------------
-1.Login: Student logs in and lands on the "Menu Page".
-2. Browse: Student sees a list of options (fetched from DB).
-3. View: View results
-4.View: Graphs showing progress over time 
-5.Notifications: View notifications from teachers/admin
-6. Feedback: View feedback and send any queries to teachers.
- 
-API ENDPOINTS(URL RULES)
+User Journey – Student
+- Login → Menu Page.
+- View results (with semester filter); view marks; export PDF.
+- View performance/analytics.
+- View notifications; view feedback.
+- Send queries to teachers; view query responses.
+- Profile (view/update, change password).
 
-1.Authentication APIs
-Method	Endpoint	Description
-POST	/auth/login	Admin/Principal/staff/teacher/student login
-POST	/auth/register	Register new admin
-GET	/auth/profile	Get logged in user details
-POST	/auth/logout	Logout user
+7. API ENDPOINTS (Implemented – base path /api)
 
-2.Admin API
+All routes are mounted under /api. Auth uses JWT (protect middleware); some routes use authorize(role).
 
-Method	Endpoint	Description
-GET	/results/studentid	Get result of a student
-GET	/results	Get all students results
-POST	/results/calculate/:studentid	Calculate total,percentage,grade
-GET	/analysis/toppers	Get top performers
-GET	/analysis/class-average	Get class average
-GET	/analysis/subject/:name	Subject wise analysis
-GET	/analysis/pass-fail	Pass or Fail statistics
-GET	/reports/download/:id	Download pdf
-3.Student APIs
-Method	Endpoint	Description
-POST	/students	Add new student
-GET	/students	Get all students
-GET	/student/:id	Get students by id
-PUT	/student/:id	Update student details
-GET	/reports/download/:id	Download pdf
-DELETE	/students/:id	Delete student
-4.Principal API
-Method	Endpoint	Description
-GET	reports/student/:id	Student result report
-GET	/reports/download/:id	Download pdf
-5.Staff API
-Method	Endpoint	Description
-POST	/marks/studentid	Add marks for a student
-PUT	/marks/studentid	Update student marks
-GET	/marks/studentid	View student marks
-GET	/reports/download/:id	Download pdf
-6.Teacher API
-Method	Endpoint	Description
-POST	/marks/studentid	Add marks for a student
-PUT	/marks/studentid	Update student marks
-PUT	/marks/studentid	Final submission of marks
-GET	/marks/studentid	View student marks
-GET	/reports/download/:id	Download pdf
-POST	/feedback/studentid	Send feedback to students
-POST	/notifications/studentid	Send notifications to students
+1. Authentication
+   POST   /api/auth/register       Register new user (name, email, password, role)
+   POST   /api/auth/login          Login (email, password); returns token
+   GET    /api/auth/profile        Get logged-in user (protected)
+   PUT    /api/auth/profile        Update profile name/email (protected)
+   PUT    /api/auth/change-password Change password (protected)
+   POST   /api/auth/change-password Same (protected)
+   POST   /api/auth/logout         Logout (protected)
 
+2. Users
+   GET    /api/users               Get all users
+   GET    /api/users/:id            Get user by ID
+   POST   /api/users               Create user (name, email, password, role)
+   PUT    /api/users/:id           Update user
+   DELETE /api/users/:id           Delete user (and linked student data if role is student)
 
+3. Courses
+   GET    /api/courses             Get all courses
+   GET    /api/courses/:courseId   Get course (optional ?include=departments)
+   POST   /api/courses             Create course
+   PUT    /api/courses/:courseId   Update course
+   DELETE /api/courses/:courseId   Delete course (if no departments)
 
+4. Departments
+   GET    /api/departments         Get all (optional ?course=id)
+   GET    /api/departments/course/:courseId  Get by course
+   GET    /api/departments/:departmentId     Get one (optional ?include=classes)
+   POST   /api/departments         Create department
+   PUT    /api/departments/:departmentId     Update department
+   DELETE /api/departments/:departmentId     Delete department
+
+5. Students
+   GET    /api/students            Get all (optional: course, department, class, section)
+   GET    /api/students/class/:classId       Get by class (?section optional)
+   GET    /api/students/user/:userId         Get by user ID
+   GET    /api/students/:id       Get student by ID
+   POST   /api/students           Create student
+   PUT    /api/students/:id       Update student
+   DELETE /api/students/:id       Delete student and related marks, results, feedback, queries, notifications, user
+
+6. Subjects
+   GET    /api/subjects           Get all (?class=id optional)
+   GET    /api/subjects/class/:classId       Get by class
+   GET    /api/subjects/:id       Get subject by ID
+   POST   /api/subjects           Create subject (adds to class.subjects)
+   PUT    /api/subjects/:id       Update subject
+   DELETE /api/subjects/:id       Delete subject
+
+7. Classes
+   GET    /api/classes            Get all (?department=id, ?teacher=id)
+   GET    /api/classes/:classId   Get class by ID
+   POST   /api/classes            Create class
+   PUT    /api/classes/:classId   Update class
+   DELETE /api/classes/:classId   Delete class
+   POST   /api/classes/:classId/subjects     Add subject-teacher to class
+   (Additional class routes for semesters, teachers, etc. as implemented.)
+
+8. Marks
+   POST   /api/marks/:studentId    Add marks (body: subjectId, marks_obtained, exam_type, semester, is_final)
+   PUT    /api/marks/:markId       Update marks by mark ID
+   GET    /api/marks/student/:studentId      Get marks for student (?semester optional)
+   GET    /api/marks/counts        Get marks count per student
+   GET    /api/marks/by-students   Get marks grouped by students (?studentIds=id1,id2)
+   GET    /api/marks/:studentId    Get marks for student (legacy path)
+
+9. Results
+   POST   /api/results/calculate/:studentId Calculate result (body: semester optional)
+   GET    /api/results             Get all (?department, class, semester)
+   GET    /api/results/:studentId  Get result(s) for student (?semester for single)
+   PUT    /api/results/:resultId/status       Update status (body: status, approved_by)
+
+10. Feedback
+    GET    /api/feedback/student/:studentId   Get feedback for student (protected; role-based)
+    POST   /api/feedback          Create feedback (protected; teacher/admin) (body: student, feedback, feedback_type)
+
+11. Queries (Student to Teacher)
+    POST   /api/queries           Create query (protected; student) (body: teacher?, subject?, query)
+    GET    /api/queries/teacher/:teacherId    Get queries for teacher (protected; teacher/admin)
+    GET    /api/queries/student/:studentId    Get queries by student (protected)
+    GET    /api/queries/:id       Get single query (protected)
+    PUT    /api/queries/:id/respond  Respond to query (protected; teacher/admin) (body: response)
+    DELETE /api/queries/:id       Delete query (protected; owner or teacher/admin)
+
+12. Notifications
+    GET    /api/notifications     Returns [] (use student endpoint for list)
+    GET    /api/notifications/student/:studentId   Get notifications for student (protected)
+    POST   /api/notifications    Create notification (protected; body: title, message, recipients, notification_type)
+    PUT    /api/notifications/:id/read   Mark as read (protected)
+
+13. Grading Schemas
+    GET    /api/grading-schemas    Get all
+    GET    /api/grading-schemas/active   Get active schema
+    GET    /api/grading-schemas/:id      Get by ID
+    POST   /api/grading-schemas   Create (protected; admin)
+    PUT    /api/grading-schemas/:id      Update (protected; admin)
+    DELETE /api/grading-schemas/:id      Delete (protected; admin)
+
+14. Analytics
+    GET    /api/analytics/class-performance   Class-wise performance (?semester, course, department, class)
+    GET    /api/analytics/section-performance Section-wise (?semester, course, department, class)
+    GET    /api/analytics/subject-analysis    Subject-wise (?semester, course, department, class)
+    GET    /api/analytics/rankings            Full rankings (?semester, course, department, class)
+    GET    /api/analytics/toppers             Toppers list (?limit, semester, course, department, class)
+    GET    /api/analytics/pass-fail           Pass/fail statistics (?semester, course, department, class)
+
+8. FRONTEND (React – Implemented Routes)
+
+- Public: / (Homepage), /login, /register.
+- Dashboard: /dashboard (generic).
+- Admin: /admin/dashboard, /admin/users, /admin/students, /admin/courses, /admin/departments, /admin/subjects, /admin/classes, /admin/results, /admin/analytics, /admin/grading-schema.
+- Teacher: /teacher/dashboard, /teacher/classes, /teacher/students, /teacher/marks, /teacher/edit-marks, /teacher/performance, /teacher/analytics, /teacher/feedback, /teacher/queries, /teacher/notifications, /teacher/profile.
+- Student: /student/dashboard, /student/results, /student/performance, /student/notifications, /student/queries, /student/feedback, /student/profile.
+- Principal: /principal/dashboard, /principal/students, /principal/student/:studentId, /principal/results, /principal/analytics, /principal/profile.
+- Staff: /staff/dashboard, /staff/students, /staff/marks, /staff/results, /staff/profile.
+
+Role-based access is enforced via ProtectedRoute and allowedRoles. Student results page supports semester filter, marks table, result cards, and PDF export (e.g. jsPDF).
+
+End of Document
